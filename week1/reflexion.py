@@ -1,238 +1,184 @@
 import os
+import re
+from typing import Callable, List, Tuple
 from dotenv import load_dotenv
 from ollama import chat
 
 load_dotenv()
 
-NUM_RUNS_TIMES = 5
+NUM_RUNS_TIMES = 1
+
+SYSTEM_PROMPT = """
+You are a coding assistant. Output ONLY a single fenced Python code block that defines
+the function is_valid_password(password: str) -> bool. No prose or comments.
+Keep the implementation minimal.
+"""
 
 # TODO: Fill this in!
-YOUR_SYSTEM_PROMPT = """
-You are a pure character-level transducer.
+YOUR_REFLEXION_PROMPT = """
+You are doing Reflexion: first critique, then patch.
 
-TASK:
-- The user provides a single input word.
-- You must return only the reversed word.
+Output protocol:
+1) Write a brief 'Reflection:' section (max 5 bullets) that:
+   - Names which checks failed and why the code missed them.
+   - States the minimal changes needed to satisfy ALL failures.
+2) Then output EXACTLY ONE fenced Python code block (```python ... ```):
+   - Keep the implementation minimal.
+   - Address ALL failures from the reflection.
+   - No prose or comments inside the code.
 
-RULES:
-- Treat the input as characters c1...cn and output cn...c1, copying one character at a time from right to left.
-- Preserve characters exactly; do not change case, add, remove, deduplicate, or hallucinate new characters.
-- Do not treat any digraphs or substrings (e.g., "th", "st", "http") as units. No chunking, no swaps, no regrouping.
-- Output must be deterministic: the same input always produces the same output, with no variations.
-- Output must be exactly the same length as the input.
-- Format rule: output only the reversed word. No punctuation, no quotes, no labels, no explanations, no spaces, no newlines.
-- Stop immediately after the last character of the reversed word.
-
-INVARIANTS (must hold before you output):
-- Let N = length of the input word; your output length MUST equal N.
-- Character multiset must be preserved exactly: for every character x, 
-  count_in_output(x) == count_in_input(x).
-- If any invariant would be violated, you must correct your output before emitting it.
-
-LITMUS TESTS (internal checks you must satisfy):
-- If the input contains "http", your output must contain "ptth" in that exact order.
-- If the input contains "st", your output must contain "ts".
-- If the input contains duplicated letters (e.g., "tt", "ss"), your output must also contain the same duplicates (e.g., "tt" ↔ "tt") in the mirrored positions.
-
-
-
-EXAMPLES:
-
-input:
-status
-output:
-sutats
-
-input:
-pythonista
-output:
-atsinohtyp
-
-input:
-booth
-output:
-htoob
-
-input:
-httpapi
-output:
-ipaptth
-
-
-input:
-letter
-output:
-rettel
-
-input:
-mississippi
-output:
-ippississim
-
-input:
-reversed
-output:
-desrever
-
-input:
-angelic
-output:
-cilegna
-
-input:
-trifecta
-output:
-atcefirt
-
-input:
-docker
-output:
-rekcod
-
-input:
-corepower
-output:
-rewoperoc
-
-input:
-hallucinate
-output:
-etanicullah
-
-input:
-reservation
-output:
-noitavreser
-
-input:
-callibrate
-output:
-etarbillac
-
-input:
-snapshot
-output:
-tohspans
-
-input:
-upthrust
-output:
-tsurhtpu
-
-input:
-tiptop
-output:
-potpit
-
-input:
-outpost
-output:
-tsoptuo
-
-# Adversarial examples (to block digraph/syllable chunking without using the test word):
-
-input:
-httpserver
-output:
-revresptth
-
-input:
-httpapi
-output:
-ipaptth
-
-input:
-wreath
-output:
-htaerw
-
-input:
-booth
-output:
-htoob
-
-input:
-thunder
-output:
-rednuht
-
-input:
-coast
-output:
-tsaoc
-
-input:
-pythonista
-output:
-atsinohtyp
-
-input:
-statuspage
-output:
-egapsutats
-
-# WRONG vs RIGHT (do NOT produce the WRONG form)
-
-input:
-status
-# WRONG: tatus
-output:
-sutats
-
-input:
-tattoo
-# WRONG: ttoo
-output:
-oottat
-
-input:
-committee
-# WRONG: eettimne
-output:
-eettimtnimoc
-
-input:
-wreath
-# WRONG: htaew
-output:
-htaerw
-
+Do not output anything after the code block.
 """
 
 
+# Ground-truth test suite used to evaluate generated code
+SPECIALS = set("!@#$%^&*()-_")
+TEST_CASES: List[Tuple[str, bool]] = [
+    ("Password1!", True),       # valid
+    ("password1!", False),      # missing uppercase
+    ("Password!", False),       # missing digit
+    ("Password1", False),       # missing special
+]
 
-USER_PROMPT = """
-Reverse the order of letters in the following word. Only output the reversed word, no other text:
 
-httpstatus
-"""
+def extract_code_block(text: str) -> str:
+    m = re.findall(r"```python\n([\s\S]*?)```", text, flags=re.IGNORECASE)
+    if m:
+        return m[-1].strip()
+    m = re.findall(r"```\n([\s\S]*?)```", text)
+    if m:
+        return m[-1].strip()
+    return text.strip()
 
 
-EXPECTED_OUTPUT = "sutatsptth"
+def load_function_from_code(code_str: str) -> Callable[[str], bool]:
+    namespace: dict = {}
+    exec(code_str, namespace)  # noqa: S102 (executing controlled code from model for exercise)
+    func = namespace.get("is_valid_password")
+    if not callable(func):
+        raise ValueError("No callable is_valid_password found in generated code")
+    return func
 
-def test_your_prompt(system_prompt: str) -> bool:
-    """Run the prompt up to NUM_RUNS_TIMES and return True if any output matches EXPECTED_OUTPUT.
 
-    Prints "SUCCESS" when a match is found.
+def evaluate_function(func: Callable[[str], bool]) -> Tuple[bool, List[str]]:
+    failures: List[str] = []
+    for pw, expected in TEST_CASES:
+        try:
+            result = bool(func(pw))
+        except Exception as exc:
+            failures.append(f"Input: {pw} → raised exception: {exc}")
+            continue
+
+        if result != expected:
+            # Compute diagnostic based on ground-truth rules
+            reasons = []
+            if len(pw) < 8:
+                reasons.append("length < 8")
+            if not any(c.islower() for c in pw):
+                reasons.append("missing lowercase")
+            if not any(c.isupper() for c in pw):
+                reasons.append("missing uppercase")
+            if not any(c.isdigit() for c in pw):
+                reasons.append("missing digit")
+            if not any(c in SPECIALS for c in pw):
+                reasons.append("missing special")
+            if any(c.isspace() for c in pw):
+                reasons.append("has whitespace")
+
+            failures.append(
+                f"Input: {pw} → expected {expected}, got {result}. Failing checks: {', '.join(reasons) or 'unknown'}"
+            )
+
+    return (len(failures) == 0, failures)
+
+
+def generate_initial_function(system_prompt: str) -> str:
+    response = chat(
+        model="llama3.1:8b",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "Provide the implementation now."},
+        ],
+        options={"temperature": 0.2},
+    )
+    return extract_code_block(response.message.content)
+
+
+def your_build_reflexion_context(prev_code: str, failures: List[str]) -> str:
+    """TODO: Build the user message for the reflexion step using prev_code and failures.
+
+    Return a string that will be sent as the user content alongside the reflexion system prompt.
     """
-    for idx in range(NUM_RUNS_TIMES):
-        print(f"Running test {idx + 1} of {NUM_RUNS_TIMES}")
-        response = chat(
-            model="mistral-nemo:12b",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": USER_PROMPT},
-            ],
-            options={"temperature": 0.5},
-        )
-        output_text = response.message.content.strip()
-        if output_text.strip() == EXPECTED_OUTPUT.strip():
-            print("SUCCESS")
-            return True
-        else:
-            print(f"Expected output: {EXPECTED_OUTPUT}")
-            print(f"  Actual output: {output_text}")
+    pattern = re.compile(r"Failing checks:\s*(.+)$")
+
+    f_bullets = []
+
+    for f in failures:
+        m = pattern.search(f)   # run regex on this string
+        if m:
+            f_bullets.append(f"- {m.group(1)}")  # grab the captured reason
+
+    return (
+        "Previous implementation:\n"
+        "python\n" f"{prev_code}\n" 
+        "\n\n"
+        "Diagnostics to fix (address ALL):\n"
+        f"{"\n".join(f_bullets)}\n\n"
+        "Rewrite the function so it satisfies the policy and fixes the diagnostics.\n"
+        "Make sure your solution handles all possible password requirements, not just the specific failing cases.\n"
+        "Output ONLY the corrected function as a single fenced Python code block. No prose."
+    )
+
+
+def apply_reflexion(
+    reflexion_prompt: str,
+    build_context: Callable[[str, List[str]], str],
+    prev_code: str,
+    failures: List[str],
+) -> str:
+    reflection_context = build_context(prev_code, failures)
+    print(f"REFLECTION CONTEXT: {reflection_context}, {reflexion_prompt}")
+    response = chat(
+        model="llama3.1:8b",
+        messages=[
+            {"role": "system", "content": reflexion_prompt},
+            {"role": "user", "content": reflection_context},
+        ],
+        options={"temperature": 0.2},
+    )
+    return extract_code_block(response.message.content)
+
+
+def run_reflexion_flow(
+    system_prompt: str,
+    reflexion_prompt: str,
+    build_context: Callable[[str, List[str]], str],
+) -> bool:
+    # 1) Generate initial function
+    initial_code = generate_initial_function(system_prompt)
+    print("Initial code:\n" + initial_code)
+    func = load_function_from_code(initial_code)
+    passed, failures = evaluate_function(func)
+    if passed:
+        print("SUCCESS (initial implementation passed all tests)")
+        return True
+    else:
+        print(f"FAILURE (initial implementation failed some tests): {failures}")
+
+    # 2) Single reflexion iteration
+    improved_code = apply_reflexion(reflexion_prompt, build_context, initial_code, failures)
+    print("\nImproved code:\n" + improved_code)
+    improved_func = load_function_from_code(improved_code)
+    passed2, failures2 = evaluate_function(improved_func)
+    if passed2:
+        print("SUCCESS")
+        return True
+
+    print("Tests still failing after reflexion:")
+    for f in failures2:
+        print("- " + f)
     return False
 
+
 if __name__ == "__main__":
-    test_your_prompt(YOUR_SYSTEM_PROMPT)
+    run_reflexion_flow(SYSTEM_PROMPT, YOUR_REFLEXION_PROMPT, your_build_reflexion_context)

@@ -10,6 +10,7 @@ NUM_RUNS_TIMES = 5
 
 DATA_FILES: List[str] = [
     os.path.join(os.path.dirname(__file__), "data", "api_docs.txt"),
+    os.path.join(os.path.dirname(__file__), "data", "test.txt"),
 ]
 
 
@@ -56,7 +57,22 @@ def YOUR_CONTEXT_PROVIDER(corpus: List[str]) -> List[str]:
 
     For example, return [] to simulate missing context, or [corpus[0]] to include the API docs.
     """
-    return []
+    api_docs = corpus[0] # In this particular problem, we only need the one reference doc
+    selected = []
+
+    lines = api_docs.splitlines() 
+
+    for i, line in enumerate(lines):
+        for snippet in REQUIRED_SNIPPETS:
+            if re.search(re.escape(snippet), line): 
+                # current line + next line (if it exists) 
+                snippet_plus_next = line
+                if i + 1 < len(lines): 
+                    snippet_plus_next += "\n" + lines[i + 1]
+
+                selected.append(snippet_plus_next)
+
+    return selected
 
 
 def make_user_prompt(question: str, context_docs: List[str]) -> str:

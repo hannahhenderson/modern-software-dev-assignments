@@ -12,10 +12,19 @@ NUM_RUNS_TIMES = 5
 YOUR_SYSTEM_PROMPT = """
     You are a calculator. You take input of word problems, extract the neccasary numeric and functional values, and calculate the result.
 
-    Before running any calculations, make sure to provide your reasoning first. 
+    PROTOCOL:
+    1. Always show your step-by-step work in a section starting with 'Reasoning:'.
+    - Break down the operations explicitly.
+    - The last number in the Reasoning must equal the final Answer.
 
-    You output the result in the format:
-    Answer: /* the calculated value */
+    2. After reasoning, output exactly one line in the format:
+    Answer: <numeric_value>
+
+    CONSTRAINTS:
+    - Answer must be a single numeric value (integer or decimal).
+    - The Answer value must match the last numeric result in the Reasoning.
+    - No quotes, no backticks, no code fences, no extra prose.
+    - Stop after the Answer line.
 """
 
 USER_PROMPT = """
