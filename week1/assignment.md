@@ -37,9 +37,9 @@ ollama run llama3.1:8b
 - [x] K-shot prompting — `week1/k_shot_prompting.py`
 - [x] Chain-of-thought — `week1/chain_of_thought.py`
 - [x] Tool calling — `week1/tool_calling.py`
-- [ ] Self-consistency prompting — `week1/self_consistency_prompting.py`
-- [ ] RAG (Retrieval-Augmented Generation) — `week1/rag.py`
-- [ ] Reflexion — `week1/reflexion.py`
+- [X] Self-consistency prompting — `week1/self_consistency_prompting.py`
+- [X] RAG (Retrieval-Augmented Generation) — `week1/rag.py`
+- [X] Reflexion — `week1/reflexion.py`
 
 ## Deliverables
 - Read the task description in each file.
