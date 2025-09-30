@@ -15,7 +15,20 @@ Keep the implementation minimal.
 """
 
 # TODO: Fill this in!
-YOUR_REFLEXION_PROMPT = ""
+YOUR_REFLEXION_PROMPT = """
+You are doing Reflexion: first critique, then patch.
+
+Output protocol:
+1) Write a brief 'Reflection:' section (max 5 bullets) that:
+   - Names which checks failed and why the code missed them.
+   - States the minimal changes needed to satisfy ALL failures.
+2) Then output EXACTLY ONE fenced Python code block (```python ... ```):
+   - Keep the implementation minimal.
+   - Address ALL failures from the reflection.
+   - No prose or comments inside the code.
+
+Do not output anything after the code block.
+"""
 
 
 # Ground-truth test suite used to evaluate generated code
@@ -96,7 +109,25 @@ def your_build_reflexion_context(prev_code: str, failures: List[str]) -> str:
 
     Return a string that will be sent as the user content alongside the reflexion system prompt.
     """
-    return ""
+    pattern = re.compile(r"Failing checks:\s*(.+)$")
+
+    f_bullets = []
+
+    for f in failures:
+        m = pattern.search(f)   # run regex on this string
+        if m:
+            f_bullets.append(f"- {m.group(1)}")  # grab the captured reason
+
+    return (
+        "Previous implementation:\n"
+        "python\n" f"{prev_code}\n" 
+        "\n\n"
+        "Diagnostics to fix (address ALL):\n"
+        f"{"\n".join(f_bullets)}\n\n"
+        "Rewrite the function so it satisfies the policy and fixes the diagnostics.\n"
+        "Make sure your solution handles all possible password requirements, not just the specific failing cases.\n"
+        "Output ONLY the corrected function as a single fenced Python code block. No prose."
+    )
 
 
 def apply_reflexion(

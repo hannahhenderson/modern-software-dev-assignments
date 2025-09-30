@@ -9,6 +9,3 @@ Endpoints:
   GET /users/{id}
     - Returns 200 with JSON: {"id": <string>, "name": <string>}
 
-
-
-
