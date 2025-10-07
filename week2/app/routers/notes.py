@@ -31,4 +31,21 @@ def get_single_note(note_id: int) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail="note not found")
     return {"id": row["id"], "content": row["content"], "created_at": row["created_at"]}
 
+# Class notes
 
+# You're going to use the tools that you set up in the coding agent
+# FastMCP makes your life easier
+# you're going to want to use cursor
+# expose the MCP&Integrations tab
+
+# "SimpleMCPTestServer": {
+#     "command": "",
+#     "args": ""
+# }
+
+# Prompt: read the pyproject.toml using the simple mcp test server
+#   LLM gets confused when there are too many tools within a server
+#   This is likely a Cursor limit
+#       Gets confused in the 10s of tools, somewhere between 30 and 100
+#       the clearer the boundaries between tools 
+# Is MCP only on the pro version of Cursor? Sounds like it's not gated
