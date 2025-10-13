@@ -5,10 +5,150 @@ import re
 from typing import List
 import json
 from typing import Any
-from ollama import chat
+from ollama import chat, Client
 from dotenv import load_dotenv
 
 load_dotenv()
+
+#Initialize the client
+client = Client()
+
+# Configuration for extraction method
+EXTRACTION_METHOD = os.getenv("EXTRACTION_METHOD", "ollama")  # "heuristic", "ollama", or "simple_ollama"
+
+# Model Recommendations (smallest to larger)
+# qwen2.5:0.5b - 0.5B params, very fast, basic extraction
+# phi3:mini - 3.8B params, good balance of speed/quality
+# llama3.2:1b - 1B params, slightly better reasoning
+# qwen2.5:1.5b - 1.5B params, good for structured tasks
+
+# Pull the smallest model
+client.pull("phi3:mini")
+
+def extract_with_ollama(text: str) -> List[str]:
+    prompt = f"""Extract action items from the input text.
+
+Detection rules:
+- Match lines with bullets (-, *, •, 1., 2., …)
+- Match lines starting with: todo:, action:, next: (case-insensitive)
+- Match lines containing [ ] or [todo]
+
+Cleaning rules:
+- Remove leading bullets or numbering
+- Remove [ ] and [todo]
+- Remove leading prefixes: todo:, action:, next:
+- Keep only the core action text
+
+Output format (required):
+- Return ONLY the cleaned action items
+- One item per line
+- No bullets, numbers, brackets, prefixes, or explanations
+- No code fences, no quotes, no extra text
+
+Input:
+{text}"""
+
+    response = client.chat(
+        model='phi3:mini',
+        messages=[{
+            'role': 'user',
+            'content': prompt
+        }],
+        options={
+            'temperature': 0,  # Maximum determinism
+            'num_predict': 500,  # Limit response length
+            'stop': ["\n\n", "Output Explanation:", "Explanation:", "Note:", "Summary:"]
+        }
+    )
+    
+    # Parse and sanitize response
+    actions = response['message']['content'].strip().split('\n')
+    return _sanitize_llm_output(actions)
+
+
+def simple_extract_with_ollama(text: str) -> List[str]:
+    prompt = f"""Find action items in the text.
+
+Rules:
+- Detect bullets (-, *, •, 1., 2.), keyword prefixes (todo:, action:, next:), and [ ] or [todo]
+- Strip bullets/numbering, [ ]/[todo], and prefixes (todo:, action:, next:)
+- Keep only the action text
+
+Output:
+- Each action on its own line
+- No bullets, numbers, brackets, prefixes, or explanations
+- No quotes, no extra text
+
+Text:
+{text}"""
+
+    response = client.chat(
+        model='qwen2.5:0.5b',  # Even smaller
+        messages=[{'role': 'user', 'content': prompt}],
+        options={
+            'temperature': 0,
+            'stop': ["\n\n", "Explanation:", "Note:", "Summary:"]
+        }
+    )
+    
+    # Parse and sanitize response
+    actions = response['message']['content'].strip().split('\n')
+    return _sanitize_llm_output(actions)
+
+
+def _sanitize_llm_output(actions: List[str]) -> List[str]:
+    """
+    Sanitize LLM output to remove formatting artifacts and ensure clean action items.
+    """
+    cleaned = []
+    seen = set()
+    
+    for action in actions:
+        if not action.strip():
+            continue
+            
+        # Remove leading bullets and numbering
+        action = re.sub(r'^[-*•]\s+', '', action.strip())
+        action = re.sub(r'^\d+\.\s+', '', action)
+        
+        # Remove checkbox markers
+        action = re.sub(r'^\[(?:\s|todo)\]\s*', '', action)
+        
+        # Remove keyword prefixes (case-insensitive)
+        action = re.sub(r'^(?:todo|action|next):\s*', '', action, flags=re.IGNORECASE)
+        
+        # Remove any remaining leading/trailing whitespace
+        action = action.strip()
+        
+        if not action:
+            continue
+            
+        # Deduplicate case-insensitively
+        lowered = action.lower()
+        if lowered not in seen:
+            seen.add(lowered)
+            cleaned.append(action)
+    
+    return cleaned
+
+
+def extract_action_items_unified(text: str) -> List[str]:
+    """
+    Unified extraction function that routes to the configured method.
+    Set EXTRACTION_METHOD environment variable to:
+    - "heuristic" for rule-based extraction
+    - "ollama" for LLM extraction with phi3:mini
+    - "simple_ollama" for LLM extraction with qwen2.5:0.5b
+    """
+    if EXTRACTION_METHOD == "heuristic":
+        return extract_action_items(text)
+    elif EXTRACTION_METHOD == "simple_ollama":
+        return simple_extract_with_ollama(text)
+    elif EXTRACTION_METHOD == "ollama":
+        return extract_with_ollama(text)
+    else:
+        raise ValueError(f"Unknown EXTRACTION_METHOD: {EXTRACTION_METHOD}. Use 'heuristic', 'ollama', or 'simple_ollama'")
+
 
 BULLET_PREFIX_PATTERN = re.compile(r"^\s*([-*•]|\d+\.)\s+")
 KEYWORD_PREFIXES = (
