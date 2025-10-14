@@ -24,6 +24,8 @@
     <div class="row">
       <label class="row"><input id="save_note" type="checkbox" checked /> Save as note</label>
       <button id="extract">Extract</button>
+      <button id="extract-llm">Extract LLM</button>
+      <button id="list-notes">List Notes</button>
     </div>
 
     <div class="items" id="items"></div>
@@ -32,6 +34,36 @@
       const $ = (sel) => document.querySelector(sel);
       const itemsEl = $('#items');
       const btn = $('#extract');
+      const btnLLM = $('#extract-llm');
+      const btnListNotes = $('#list-notes');
+      
+      // Helper function to handle checkbox events
+      function setupCheckboxes() {
+        itemsEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.addEventListener('change', async (e) => {
+            const id = e.target.getAttribute('data-id');
+            await fetch(`/action-items/${id}/done`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ done: e.target.checked }),
+            });
+          });
+        });
+      }
+      
+      // Helper function to display results
+      function displayResults(data) {
+        if (!data.items || data.items.length === 0) {
+          itemsEl.innerHTML = '<p class="muted">No action items found.</p>';
+          return;
+        }
+        itemsEl.innerHTML = data.items.map(it => (
+          `<div class="item"><input type="checkbox" data-id="${it.id}" /> <span>${it.text}</span></div>`
+        )).join('');
+        setupCheckboxes();
+      }
+      
+      // Original Extract button (heuristic method)
       btn.addEventListener('click', async () => {
         const text = $('#text').value;
         const save = $('#save_note').checked;
@@ -44,26 +76,73 @@
           });
           if (!res.ok) throw new Error('Request failed');
           const data = await res.json();
-          if (!data.items || data.items.length === 0) {
-            itemsEl.innerHTML = '<p class="muted">No action items found.</p>';
-            return;
-          }
-          itemsEl.innerHTML = data.items.map(it => (
-            `<div class="item"><input type="checkbox" data-id="${it.id}" /> <span>${it.text}</span></div>`
-          )).join('');
-          itemsEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-            cb.addEventListener('change', async (e) => {
-              const id = e.target.getAttribute('data-id');
-              await fetch(`/action-items/${id}/done`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ done: e.target.checked }),
-              });
-            });
-          });
+          displayResults(data);
         } catch (err) {
           console.error(err);
           itemsEl.textContent = 'Error extracting items';
+        }
+      });
+      
+      // New Extract LLM button
+      btnLLM.addEventListener('click', async () => {
+        const text = $('#text').value;
+        const save = $('#save_note').checked;
+        itemsEl.textContent = 'Extracting with LLM...';
+        try {
+          const res = await fetch('/action-items/extract-llm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, save_note: save, method: 'simple' }),
+          });
+          if (!res.ok) throw new Error('Request failed');
+          const data = await res.json();
+          displayResults(data);
+        } catch (err) {
+          console.error(err);
+          itemsEl.textContent = 'Error extracting items with LLM';
+        }
+      });
+      
+      // List Notes button
+      btnListNotes.addEventListener('click', async () => {
+        itemsEl.textContent = 'Loading all records...';
+        try {
+          const res = await fetch('/action-items/all-records', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (!res.ok) throw new Error('Request failed');
+          const data = await res.json();
+          
+          // Display all records (both notes and action items)
+          if (!data.notes && !data.action_items) {
+            itemsEl.innerHTML = '<p class="muted">No records found in database.</p>';
+            return;
+          }
+          
+          let html = '';
+          
+          // Display notes
+          if (data.notes && data.notes.length > 0) {
+            html += '<h3>Notes (' + data.notes.length + ')</h3>';
+            html += data.notes.map(note => 
+              `<div class="item"><strong>Note #${note.id}:</strong> ${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''} <span class="muted">(${note.created_at})</span></div>`
+            ).join('');
+          }
+          
+          // Display action items
+          if (data.action_items && data.action_items.length > 0) {
+            html += '<h3>Action Items (' + data.action_items.length + ')</h3>';
+            html += data.action_items.map(item => 
+              `<div class="item"><input type="checkbox" data-id="${item.id}" ${item.done ? 'checked' : ''} /> <span>${item.text}</span> <span class="muted">(${item.created_at})</span></div>`
+            ).join('');
+          }
+          
+          itemsEl.innerHTML = html;
+          setupCheckboxes();
+        } catch (err) {
+          console.error(err);
+          itemsEl.textContent = 'Error loading records';
         }
       });
 
