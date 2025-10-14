@@ -16,6 +16,9 @@ client = Client()
 # Configuration for extraction method
 EXTRACTION_METHOD = os.getenv("EXTRACTION_METHOD", "simple_ollama")  # "heuristic", "ollama", or "simple_ollama"
 
+# Model selection for LLM methods
+LLM_MODEL = os.getenv("LLM_MODEL", "phi3:mini")  # Default to phi3:mini for better reliability
+
 # Model Recommendations (smallest to larger)
 # qwen2.5:0.5b - 0.5B params, very fast, basic extraction
 # phi3:mini - 3.8B params, good balance of speed/quality
@@ -26,47 +29,60 @@ EXTRACTION_METHOD = os.getenv("EXTRACTION_METHOD", "simple_ollama")  # "heuristi
 client.pull("phi3:mini")
 
 def extract_with_ollama(text: str) -> List[str]:
-    prompt = f"""Extract action items from the input text.
+    # Handle edge cases before calling LLM
+    if not text or not text.strip():
+        return []
+    
+    prompt = f"""You are an action item extractor. Your job is to find and extract actionable items from text.
 
-Detection rules:
-- Match lines with bullets (-, *, •, 1., 2., …)
-- Match lines starting with: todo:, action:, next: (case-insensitive)
-- Match lines containing [ ] or [todo]
+PROCESS:
+1. Read each line of the input text
+2. Identify lines that contain action items (bullets, keywords, checkboxes)
+3. Clean the formatting and extract just the action text
+4. Return each action on its own line
 
-Cleaning rules:
-- Remove leading bullets or numbering
-- Remove [ ] and [todo]
-- Remove leading prefixes: todo:, action:, next:
-- Keep only the core action text
+PATTERNS TO FIND:
+- Lines starting with: -, *, •, 1., 2., todo:, action:, next:
+- Lines containing: [ ] or [todo]
 
-CRITICAL: Return ONLY the cleaned action items. Do not add explanations, summaries, or commentary.
+EXAMPLES:
+"- [ ] Fix bug" becomes "Fix bug"
+"* Implement feature" becomes "Implement feature"
+"1. Write tests" becomes "Write tests"
+"todo: Deploy app" becomes "Deploy app"
 
-Input:
+Text:
 {text}"""
 
-    response = client.chat(
-        model='phi3:mini',
-        messages=[
-            {
-                'role': 'system', 
-                'content': 'You are a precise action item extractor. Return only cleaned action items, one per line. No explanations or commentary.'
-            },
-            {
-                'role': 'user', 
-                'content': prompt
+    try:
+        response = client.chat(
+            model=LLM_MODEL,
+            messages=[
+                {
+                    'role': 'system', 
+                    'content': 'You are a precise action item extractor. Return only cleaned action items, one per line. No explanations or commentary.'
+                },
+                {
+                    'role': 'user', 
+                    'content': prompt
+                }
+            ],
+            options={
+                'temperature': 0,  # Maximum determinism
+                'top_p': 0.3,  # Slightly more focused sampling for phi3:mini
+                'num_predict': 150,  # Shorter limit for phi3:mini
+                'stop': ["\n\n", "Output Explanation:", "Explanation:", "Note:", "Summary:", "Output:", "Result:", "Here are", "The extracted", "```", "```json", "{", "[", "Step", "Process"]
             }
-        ],
-        options={
-            'temperature': 0,  # Maximum determinism
-            'num_predict': 200,  # Much shorter limit
-            'stop': ["\n\n", "Output Explanation:", "Explanation:", "Note:", "Summary:", "Output:", "Result:", "Here are", "The extracted"]
-        }
-    )
-    
-    # Parse and validate response
-    actions = response['message']['content'].strip().split('\n')
-    validated_actions = _validate_llm_response(actions)
-    return _sanitize_llm_output(validated_actions)
+        )
+        
+        # Parse and validate response
+        actions = response['message']['content'].strip().split('\n')
+        validated_actions = _validate_llm_response(actions)
+        return _sanitize_llm_output(validated_actions)
+    except Exception as e:
+        # Fallback to heuristic method if LLM fails
+        print(f"LLM extraction failed: {e}, falling back to heuristic method")
+        return extract_action_items(text)
 
 
 def _validate_llm_response(actions: List[str]) -> List[str]:
@@ -77,44 +93,85 @@ def _validate_llm_response(actions: List[str]) -> List[str]:
         action = action.strip()
         if not action:
             continue
-        # Skip lines that look like commentary
+            
+        # Skip lines that look like commentary or responses
         if any(commentary in action.lower() for commentary in [
-            'output:', 'result:', 'here are', 'the extracted', 'summary:', 'explanation:'
+            'output:', 'result:', 'here are', 'the extracted', 'summary:', 'explanation:',
+            'no action items found', 'i\'m sorry', 'cannot provide', 'not provided',
+            'step 1:', 'step 2:', 'step 3:', 'step 4:', 'step 5:', 'step 6:',
+            'scan', 'check', 'identify', 'process', 'read each line',
+            'action items extracted', 'from the text', 'are:',
+            'as there are no', 'there are no action items', 'no action items found',
+            'i am unable', 'unable to extract', 'no specific tasks',
+            'if you have', 'different passage', 'explicit instructions',
+            'cannot extract', 'unable to identify', 'no tasks', 'no directives',
+            'no actionable content', 'i cannot', 'cannot provide'
         ]):
             continue
+            
+        # Skip JSON formatting artifacts
+        if any(json_artifact in action for json_artifact in [
+            '```', '```json', '{', '}', '[', ']', '{"', '"}', '"action":', '"description":',
+            '"next":', '"todo":', '",', '"', 'json'
+        ]):
+            continue
+            
+        # Skip lines that are too long (likely explanations)
+        if len(action) > 200:
+            continue
+            
+        # Skip lines that start with "As there are no" (common LLM response)
+        if action.startswith('As there are no'):
+            continue
+            
         validated.append(action)
     
     return validated
 
 
 def simple_extract_with_ollama(text: str) -> List[str]:
-    prompt = f"""Find action items in the text.
+    # Handle edge cases before calling LLM
+    if not text or not text.strip():
+        return []
+    
+    prompt = f"""Find action items in this text.
 
-Rules:
-- Detect bullets (-, *, •, 1., 2.), keyword prefixes (todo:, action:, next:), and [ ] or [todo]
-- Strip bullets/numbering, [ ]/[todo], and prefixes (todo:, action:, next:)
-- Keep only the action text
+Look for:
+- Lines starting with: -, *, •, 1., 2., todo:, action:, next:
+- Lines with: [ ] or [todo]
 
-Output:
-- Each action on its own line
-- No bullets, numbers, brackets, prefixes, or explanations
-- No quotes, no extra text
+Remove bullets, numbers, brackets, prefixes.
+Return only the action text, one per line.
+
+Examples:
+"- [ ] Fix bug" → "Fix bug"
+"* Implement feature" → "Implement feature"
+"1. Write tests" → "Write tests"
+"todo: Deploy app" → "Deploy app"
 
 Text:
 {text}"""
 
-    response = client.chat(
-        model='qwen2.5:0.5b',  # Even smaller
-        messages=[{'role': 'user', 'content': prompt}],
-        options={
-            'temperature': 0,
-            'stop': ["\n\n", "Explanation:", "Note:", "Summary:"]
-        }
-    )
-    
-    # Parse and sanitize response
-    actions = response['message']['content'].strip().split('\n')
-    return _sanitize_llm_output(actions)
+    try:
+        response = client.chat(
+            model=LLM_MODEL,  # Use configurable model
+            messages=[{'role': 'user', 'content': prompt}],
+            options={
+                'temperature': 0,  # Maximum determinism
+                'top_p': 0.05,  # Extremely focused sampling for qwen2.5:0.5b
+                'num_predict': 50,  # Very short limit for very small model
+                'stop': ["\n\n", "Explanation:", "Note:", "Summary:", "```", "```json", "{", "[", "Step", "Process", "Scan", "Check", "Identify", "Action", "Items", "Found"]
+            }
+        )
+        
+        # Parse and sanitize response
+        actions = response['message']['content'].strip().split('\n')
+        validated_actions = _validate_llm_response(actions)
+        return _sanitize_llm_output(validated_actions)
+    except Exception as e:
+        # Fallback to heuristic method if LLM fails
+        print(f"LLM extraction failed: {e}, falling back to heuristic method")
+        return extract_action_items(text)
 
 
 def _sanitize_llm_output(actions: List[str]) -> List[str]:
@@ -205,6 +262,11 @@ def extract_action_items(text: str) -> List[str]:
             # Trim common checkbox markers
             cleaned = cleaned.removeprefix("[ ]").strip()
             cleaned = cleaned.removeprefix("[todo]").strip()
+            # Remove keyword prefixes
+            for prefix in KEYWORD_PREFIXES:
+                if cleaned.lower().startswith(prefix):
+                    cleaned = cleaned[len(prefix):].strip()
+                    break
             extracted.append(cleaned)
     # Fallback: if nothing matched, heuristically split into sentences and pick imperative-like ones
     if not extracted:
