@@ -24,6 +24,7 @@
     <div class="row">
       <label class="row"><input id="save_note" type="checkbox" checked /> Save as note</label>
       <button id="extract">Extract</button>
+      <button id="extract-llm">Extract LLM</button>
     </div>
 
     <div class="items" id="items"></div>
@@ -32,6 +33,35 @@
       const $ = (sel) => document.querySelector(sel);
       const itemsEl = $('#items');
       const btn = $('#extract');
+      const btnLLM = $('#extract-llm');
+      
+      // Helper function to handle checkbox events
+      function setupCheckboxes() {
+        itemsEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.addEventListener('change', async (e) => {
+            const id = e.target.getAttribute('data-id');
+            await fetch(`/action-items/${id}/done`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ done: e.target.checked }),
+            });
+          });
+        });
+      }
+      
+      // Helper function to display results
+      function displayResults(data) {
+        if (!data.items || data.items.length === 0) {
+          itemsEl.innerHTML = '<p class="muted">No action items found.</p>';
+          return;
+        }
+        itemsEl.innerHTML = data.items.map(it => (
+          `<div class="item"><input type="checkbox" data-id="${it.id}" /> <span>${it.text}</span></div>`
+        )).join('');
+        setupCheckboxes();
+      }
+      
+      // Original Extract button (heuristic method)
       btn.addEventListener('click', async () => {
         const text = $('#text').value;
         const save = $('#save_note').checked;
@@ -44,26 +74,30 @@
           });
           if (!res.ok) throw new Error('Request failed');
           const data = await res.json();
-          if (!data.items || data.items.length === 0) {
-            itemsEl.innerHTML = '<p class="muted">No action items found.</p>';
-            return;
-          }
-          itemsEl.innerHTML = data.items.map(it => (
-            `<div class="item"><input type="checkbox" data-id="${it.id}" /> <span>${it.text}</span></div>`
-          )).join('');
-          itemsEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-            cb.addEventListener('change', async (e) => {
-              const id = e.target.getAttribute('data-id');
-              await fetch(`/action-items/${id}/done`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ done: e.target.checked }),
-              });
-            });
-          });
+          displayResults(data);
         } catch (err) {
           console.error(err);
           itemsEl.textContent = 'Error extracting items';
+        }
+      });
+      
+      // New Extract LLM button
+      btnLLM.addEventListener('click', async () => {
+        const text = $('#text').value;
+        const save = $('#save_note').checked;
+        itemsEl.textContent = 'Extracting with LLM...';
+        try {
+          const res = await fetch('/action-items/extract-llm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, save_note: save, method: 'simple' }),
+          });
+          if (!res.ok) throw new Error('Request failed');
+          const data = await res.json();
+          displayResults(data);
+        } catch (err) {
+          console.error(err);
+          itemsEl.textContent = 'Error extracting items with LLM';
         }
       });
 
