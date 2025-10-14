@@ -4,8 +4,8 @@ import pytest
 from ..app.services.extract import (
     extract_action_items_unified,
     extract_action_items,
-    extract_with_ollama,
-    simple_extract_with_ollama
+    extract_with_ollama_detailed,
+    extract_with_ollama_simple
 )
 
 
@@ -39,8 +39,8 @@ def test_heuristic_extraction():
     assert "Deploy app" in items
 
 
-def test_ollama_extraction():
-    """Test LLM extraction with phi3:mini"""
+def test_ollama_detailed_extraction():
+    """Test detailed LLM extraction with phi3:mini"""
     text = """
     - [ ] Fix bug
     todo: Add tests
@@ -48,12 +48,12 @@ def test_ollama_extraction():
     Some regular text.
     """.strip()
     
-    items = extract_with_ollama(text)
+    items = extract_with_ollama_detailed(text)
     # Should extract the same items but via LLM
     assert len(items) > 0
 
 
-def test_simple_ollama_extraction():
+def test_ollama_simple_extraction():
     """Test simple LLM extraction with qwen2.5:0.5b"""
     text = """
     - [ ] Fix bug
@@ -62,7 +62,7 @@ def test_simple_ollama_extraction():
     Some regular text.
     """.strip()
     
-    items = simple_extract_with_ollama(text)
+    items = extract_with_ollama_simple(text)
     # Should extract the same items but via smaller LLM
     assert len(items) > 0
 
