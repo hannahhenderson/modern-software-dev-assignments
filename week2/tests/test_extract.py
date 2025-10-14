@@ -1,11 +1,8 @@
-import os
-import pytest
-
 from ..app.services.extract import (
-    extract_action_items_unified,
     extract_action_items,
+    extract_action_items_unified,
     extract_with_ollama_detailed,
-    extract_with_ollama_simple
+    extract_with_ollama_simple,
 )
 
 

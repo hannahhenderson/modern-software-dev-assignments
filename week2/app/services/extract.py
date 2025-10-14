@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import logging
 import re
+import time
+from collections.abc import Generator
+from contextlib import contextmanager
 
 from dotenv import load_dotenv
 from ollama import Client
 
 from .config import (
     MAX_ACTION_LENGTH,
-    LLMConfigDict,
+    LLMConfig,
     get_extraction_method,
     get_llm_config,
     get_llm_model,
@@ -23,8 +26,62 @@ load_dotenv()
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Initialize the client
-client = Client()
+# Global client instance (lazy initialization)
+_client: Client | None = None
+
+
+def _get_client() -> Client:
+    """Get or create the Ollama client with lazy initialization."""
+    global _client
+    if _client is None:
+        try:
+            _client = Client()
+            logger.info("Ollama client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Ollama client: {e}")
+            raise RuntimeError(f"Failed to initialize Ollama client: {e}") from e
+    return _client
+
+
+@contextmanager
+def _llm_client_with_retry(
+    max_retries: int = 3, base_delay: float = 1.0
+) -> Generator[Client, None, None]:
+    """
+    Context manager for LLM client with retry logic.
+
+    Args:
+        max_retries: Maximum number of retry attempts
+        base_delay: Base delay between retries in seconds
+
+    Yields:
+        Client: The Ollama client
+
+    Raises:
+        RuntimeError: If all retry attempts fail
+    """
+    client = _get_client()
+
+    for attempt in range(max_retries + 1):
+        try:
+            yield client
+            return
+        except (ConnectionError, TimeoutError) as e:
+            if attempt < max_retries:
+                delay = base_delay * (2**attempt)  # Exponential backoff
+                logger.warning(
+                    f"LLM connection failed (attempt {attempt + 1}/{max_retries + 1}): {e}. Retrying in {delay}s..."
+                )
+                time.sleep(delay)
+            else:
+                logger.error(f"LLM connection failed after {max_retries + 1} attempts: {e}")
+                raise RuntimeError(
+                    f"LLM connection failed after {max_retries + 1} attempts: {e}"
+                ) from e
+        except Exception as e:
+            logger.error(f"Unexpected error in LLM client: {e}")
+            raise
+
 
 # Compile regex patterns once for performance
 BULLET_PREFIX_PATTERN = re.compile(r"^\s*([-*•]|\d+\.)\s+")
@@ -92,54 +149,86 @@ JSON_ARTIFACTS = [
     "json",
 ]
 
-# Pull the default model
+
+def _ensure_model_available(model_name: str) -> None:
+    """
+    Ensure the specified model is available, pulling it if necessary.
+
+    Args:
+        model_name: Name of the model to ensure is available
+
+    Raises:
+        RuntimeError: If model cannot be pulled or is unavailable
+    """
+    try:
+        with _llm_client_with_retry() as client:
+            # Try to use the model first
+            try:
+                client.chat(
+                    model=model_name,
+                    messages=[{"role": "user", "content": "test"}],
+                    options={"num_predict": 1},
+                )
+                logger.debug(f"Model {model_name} is already available")
+                return
+            except Exception:
+                # Model not available, try to pull it
+                logger.info(f"Model {model_name} not available, attempting to pull...")
+                client.pull(model_name)
+                logger.info(f"Successfully pulled {model_name} model")
+    except Exception as e:
+        logger.error(f"Failed to ensure model {model_name} is available: {e}")
+        raise RuntimeError(f"Failed to ensure model {model_name} is available: {e}") from e
+
+
+# Initialize default model on module load
 try:
-    client.pull("phi3:mini")
-    logger.info("Successfully pulled phi3:mini model")
-except Exception as e:
-    logger.warning(f"Failed to pull phi3:mini model: {e}")
+    _ensure_model_available("phi3:mini")
+except RuntimeError as e:
+    logger.warning(f"Could not initialize default model: {e}")
 
 
-def _call_llm_with_fallback(text: str, prompt: str, config: LLMConfigDict) -> list[str]:
+def _call_llm_with_fallback(text: str, prompt: str, config: LLMConfig) -> list[str]:
     """
     Common LLM calling logic with fallback to heuristic method.
 
     Args:
         text: Input text to extract action items from
         prompt: The prompt to send to the LLM
-        config: LLM configuration dictionary
+        config: LLM configuration object
 
     Returns:
         List of extracted action items, or heuristic fallback on error
     """
     try:
-        response = client.chat(
-            model=config["model"],
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a precise action item extractor. Return only cleaned action items, one per line. No explanations or commentary.",
+        with _llm_client_with_retry() as client:
+            response = client.chat(
+                model=config.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a precise action item extractor. Return only cleaned action items, one per line. No explanations or commentary.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                options={
+                    "temperature": config.temperature,
+                    "top_p": config.top_p,
+                    "num_predict": config.num_predict,
+                    "stop": list(config.stop_sequences),
                 },
-                {"role": "user", "content": prompt},
-            ],
-            options={
-                "temperature": config["temperature"],
-                "top_p": config["top_p"],
-                "num_predict": config["num_predict"],
-                "stop": config["stop_sequences"],
-            },
-        )
+            )
 
-        # Parse and validate response
-        content = response.get("message", {}).get("content", "")
-        if not content:
-            logger.warning("Empty response from LLM")
-            return extract_action_items(text)
+            # Parse and validate response
+            content = response.get("message", {}).get("content", "")
+            if not content:
+                logger.warning("Empty response from LLM")
+                return extract_action_items(text)
 
-        actions = content.strip().split("\n")
-        validated_actions = _validate_llm_response(actions)
-        sanitized_actions = _sanitize_llm_output(validated_actions)
-        return _deduplicate_actions(sanitized_actions)
+            actions = content.strip().split("\n")
+            validated_actions = _validate_llm_response(actions)
+            sanitized_actions = _sanitize_llm_output(validated_actions)
+            return _deduplicate_actions(sanitized_actions)
 
     except (ConnectionError, TimeoutError) as e:
         logger.error(f"LLM connection failed: {e}, falling back to heuristic method")
@@ -170,6 +259,14 @@ def extract_with_ollama_detailed(text: str) -> list[str]:
     if not validated_text:
         return []
 
+    # Ensure model is available
+    model_name = get_llm_model()
+    try:
+        _ensure_model_available(model_name)
+    except RuntimeError as e:
+        logger.warning(f"Could not ensure model availability: {e}, falling back to heuristic")
+        return extract_action_items(validated_text)
+
     prompt = f"""You are an action item extractor. Your job is to find and extract actionable items from text.
 
 PROCESS:
@@ -191,7 +288,7 @@ EXAMPLES:
 Text:
 {validated_text}"""
 
-    config = get_llm_config(get_llm_model())
+    config = get_llm_config(model_name)
     return _call_llm_with_fallback(validated_text, prompt, config)
 
 
@@ -254,6 +351,14 @@ def extract_with_ollama_simple(text: str) -> list[str]:
     if not validated_text:
         return []
 
+    # Ensure model is available
+    model_name = get_llm_model()
+    try:
+        _ensure_model_available(model_name)
+    except RuntimeError as e:
+        logger.warning(f"Could not ensure model availability: {e}, falling back to heuristic")
+        return extract_action_items(validated_text)
+
     prompt = f"""Find action items in this text.
 
 Look for:
@@ -272,7 +377,7 @@ Examples:
 Text:
 {validated_text}"""
 
-    config = get_llm_config(get_llm_model())
+    config = get_llm_config(model_name)
     return _call_llm_with_fallback(validated_text, prompt, config)
 
 
@@ -351,16 +456,24 @@ def extract_action_items_unified(text: str) -> list[str]:
 
     method = get_extraction_method()
 
-    if method == "heuristic":
+    try:
+        match method:
+            case "heuristic":
+                return extract_action_items(validated_text)
+            case "llm_simple":
+                return extract_with_ollama_simple(validated_text)
+            case "llm_detailed":
+                return extract_with_ollama_detailed(validated_text)
+            case _:
+                raise ValueError(
+                    f"Unknown EXTRACTION_METHOD: {method}. "
+                    f"Use 'heuristic', 'llm_detailed', or 'llm_simple'"
+                )
+    except Exception as e:
+        logger.error(f"Extraction failed with method '{method}': {e}")
+        # Fallback to heuristic method for any unexpected errors
+        logger.info("Falling back to heuristic extraction method")
         return extract_action_items(validated_text)
-    elif method == "llm_simple":
-        return extract_with_ollama_simple(validated_text)
-    elif method == "llm_detailed":
-        return extract_with_ollama_detailed(validated_text)
-    else:
-        raise ValueError(
-            f"Unknown EXTRACTION_METHOD: {method}. Use 'heuristic', 'llm_detailed', or 'llm_simple'"
-        )
 
 
 # These are already defined above, removing duplication
