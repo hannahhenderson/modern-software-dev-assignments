@@ -1,67 +1,30 @@
+"""Action item extraction service with multiple extraction methods."""
+
 from __future__ import annotations
 
-import os
+import logging
 import re
-from typing import List, Dict, Any
-from ollama import chat, Client
+from functools import lru_cache
+from typing import Any
+
+from ollama import Client
 from dotenv import load_dotenv
 
+from .config import get_extraction_method, get_llm_config, get_llm_model, MAX_ACTION_LENGTH
+from .validation import validate_text_input, validate_action_items
+
+# Load environment variables
 load_dotenv()
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Initialize the client
 client = Client()
 
-# Constants
-MAX_ACTION_LENGTH = 200  # Filter out overly long responses
-MAX_TOKENS_DETAILED = 150  # Limit response length for detailed extraction
-MAX_TOKENS_SIMPLE = 50    # Limit response length for simple extraction
-
-# Configuration for extraction method
-EXTRACTION_METHOD = os.getenv("EXTRACTION_METHOD", "llm_simple")  # "heuristic", "llm_detailed", or "llm_simple"
-
-# Model selection for LLM methods
-LLM_MODEL = os.getenv("LLM_MODEL", "phi3:mini")  # Default to phi3:mini for better reliability
-
-def get_llm_config(model: str) -> Dict[str, Any]:
-    """
-    Get LLM configuration for a specific model.
-    
-    Args:
-        model: The model name (e.g., 'qwen2.5:0.5b', 'phi3:mini')
-        
-    Returns:
-        Dictionary containing model configuration parameters
-    """
-    configs = {
-        "qwen2.5:0.5b": {
-            "model": model,
-            "temperature": 0.0,
-            "top_p": 0.05,
-            "num_predict": MAX_TOKENS_SIMPLE,
-            "stop_sequences": [
-                "\n\n", "Explanation:", "Note:", "Summary:", "```", "```json", 
-                "{", "[", "Step", "Process", "Scan", "Check", "Identify", 
-                "Action", "Items", "Found"
-            ]
-        },
-        "phi3:mini": {
-            "model": model,
-            "temperature": 0.0,
-            "top_p": 0.3,
-            "num_predict": MAX_TOKENS_DETAILED,
-            "stop_sequences": [
-                "\n\n", "Output Explanation:", "Explanation:", "Note:", "Summary:", 
-                "Output:", "Result:", "Here are", "The extracted", "```", "```json", 
-                "{", "[", "Step", "Process"
-            ]
-        }
-    }
-    
-    # Return config for model, or default to phi3:mini if unknown
-    return configs.get(model, configs["phi3:mini"])
-
-# Pull the default model
-client.pull("phi3:mini")
+# Compile regex patterns once for performance
+BULLET_PREFIX_PATTERN = re.compile(r"^\s*([-*•]|\d+\.)\s+")
+KEYWORD_PREFIXES = ("todo:", "action:", "next:")
 
 # Keyword categories for filtering LLM responses
 COMMENTARY_KEYWORDS = [
@@ -82,7 +45,14 @@ JSON_ARTIFACTS = [
     '"next":', '"todo":', '",', '"', 'json'
 ]
 
-def _call_llm_with_fallback(text: str, prompt: str, config: Dict[str, Any]) -> List[str]:
+# Pull the default model
+try:
+    client.pull("phi3:mini")
+    logger.info("Successfully pulled phi3:mini model")
+except Exception as e:
+    logger.warning(f"Failed to pull phi3:mini model: {e}")
+
+def _call_llm_with_fallback(text: str, prompt: str, config: dict[str, Any]) -> list[str]:
     """
     Common LLM calling logic with fallback to heuristic method.
     
@@ -116,16 +86,24 @@ def _call_llm_with_fallback(text: str, prompt: str, config: Dict[str, Any]) -> L
         )
         
         # Parse and validate response
-        actions = response['message']['content'].strip().split('\n')
+        content = response.get('message', {}).get('content', '')
+        if not content:
+            logger.warning("Empty response from LLM")
+            return extract_action_items(text)
+            
+        actions = content.strip().split('\n')
         validated_actions = _validate_llm_response(actions)
         sanitized_actions = _sanitize_llm_output(validated_actions)
         return _deduplicate_actions(sanitized_actions)
+        
+    except (ConnectionError, TimeoutError) as e:
+        logger.error(f"LLM connection failed: {e}, falling back to heuristic method")
+        return extract_action_items(text)
     except Exception as e:
-        # Fallback to heuristic method if LLM fails
-        print(f"LLM extraction failed: {e}, falling back to heuristic method")
+        logger.error(f"LLM extraction failed: {e}, falling back to heuristic method")
         return extract_action_items(text)
 
-def extract_with_ollama_detailed(text: str) -> List[str]:
+def extract_with_ollama_detailed(text: str) -> list[str]:
     """
     Extract action items using detailed LLM prompting.
     
@@ -138,10 +116,12 @@ def extract_with_ollama_detailed(text: str) -> List[str]:
         List of cleaned action items
         
     Raises:
-        No exceptions (falls back to heuristic on error)
+        ValueError: If text is invalid
+        TypeError: If text is not a string
     """
-    # Handle edge cases before calling LLM
-    if not text or not text.strip():
+    # Validate input
+    validated_text = validate_text_input(text)
+    if not validated_text:
         return []
     
     prompt = f"""You are an action item extractor. Your job is to find and extract actionable items from text.
@@ -163,13 +143,13 @@ EXAMPLES:
 "todo: Deploy app" becomes "Deploy app"
 
 Text:
-{text}"""
+{validated_text}"""
 
-    config = get_llm_config(LLM_MODEL)
-    return _call_llm_with_fallback(text, prompt, config)
+    config = get_llm_config(get_llm_model())
+    return _call_llm_with_fallback(validated_text, prompt, config)
 
 
-def _validate_llm_response(actions: List[str]) -> List[str]:
+def _validate_llm_response(actions: list[str]) -> list[str]:
     """
     Validate that response contains only action items, no commentary.
     
@@ -207,7 +187,7 @@ def _validate_llm_response(actions: List[str]) -> List[str]:
     return validated
 
 
-def extract_with_ollama_simple(text: str) -> List[str]:
+def extract_with_ollama_simple(text: str) -> list[str]:
     """
     Extract action items using simple LLM prompting.
     
@@ -220,10 +200,12 @@ def extract_with_ollama_simple(text: str) -> List[str]:
         List of cleaned action items
         
     Raises:
-        No exceptions (falls back to heuristic on error)
+        ValueError: If text is invalid
+        TypeError: If text is not a string
     """
-    # Handle edge cases before calling LLM
-    if not text or not text.strip():
+    # Validate input
+    validated_text = validate_text_input(text)
+    if not validated_text:
         return []
     
     prompt = f"""Find action items in this text.
@@ -242,13 +224,13 @@ Examples:
 "todo: Deploy app" → "Deploy app"
 
 Text:
-{text}"""
+{validated_text}"""
 
-    config = get_llm_config(LLM_MODEL)
-    return _call_llm_with_fallback(text, prompt, config)
+    config = get_llm_config(get_llm_model())
+    return _call_llm_with_fallback(validated_text, prompt, config)
 
 
-def _sanitize_llm_output(actions: List[str]) -> List[str]:
+def _sanitize_llm_output(actions: list[str]) -> list[str]:
     """
     Sanitize LLM output to remove formatting artifacts.
     Only handles cleaning, not deduplication.
@@ -279,7 +261,7 @@ def _sanitize_llm_output(actions: List[str]) -> List[str]:
     
     return cleaned
 
-def _deduplicate_actions(actions: List[str]) -> List[str]:
+def _deduplicate_actions(actions: list[str]) -> list[str]:
     """
     Remove duplicate actions while preserving order.
     Case-insensitive deduplication.
@@ -296,7 +278,7 @@ def _deduplicate_actions(actions: List[str]) -> List[str]:
     return unique
 
 
-def extract_action_items_unified(text: str) -> List[str]:
+def extract_action_items_unified(text: str) -> list[str]:
     """
     Unified extraction function that routes to the configured method.
     
@@ -313,23 +295,26 @@ def extract_action_items_unified(text: str) -> List[str]:
         
     Raises:
         ValueError: If EXTRACTION_METHOD is not recognized
+        TypeError: If text is not a string
     """
-    if EXTRACTION_METHOD == "heuristic":
-        return extract_action_items(text)
-    elif EXTRACTION_METHOD == "llm_simple":
-        return extract_with_ollama_simple(text)
-    elif EXTRACTION_METHOD == "llm_detailed":
-        return extract_with_ollama_detailed(text)
+    # Validate input
+    validated_text = validate_text_input(text)
+    if not validated_text:
+        return []
+    
+    method = get_extraction_method()
+    
+    if method == "heuristic":
+        return extract_action_items(validated_text)
+    elif method == "llm_simple":
+        return extract_with_ollama_simple(validated_text)
+    elif method == "llm_detailed":
+        return extract_with_ollama_detailed(validated_text)
     else:
-        raise ValueError(f"Unknown EXTRACTION_METHOD: {EXTRACTION_METHOD}. Use 'heuristic', 'llm_detailed', or 'llm_simple'")
+        raise ValueError(f"Unknown EXTRACTION_METHOD: {method}. Use 'heuristic', 'llm_detailed', or 'llm_simple'")
 
 
-BULLET_PREFIX_PATTERN = re.compile(r"^\s*([-*•]|\d+\.)\s+")
-KEYWORD_PREFIXES = (
-    "todo:",
-    "action:",
-    "next:",
-)
+# These are already defined above, removing duplication
 
 
 def _is_action_line(line: str) -> bool:
@@ -345,9 +330,9 @@ def _is_action_line(line: str) -> bool:
     return False
 
 
-def extract_action_items(text: str) -> List[str]:
+def extract_action_items(text: str) -> list[str]:
     lines = text.splitlines()
-    extracted: List[str] = []
+    extracted: list[str] = []
     for raw_line in lines:
         line = raw_line.strip()
         if not line:
@@ -375,7 +360,7 @@ def extract_action_items(text: str) -> List[str]:
                 extracted.append(s)
     # Deduplicate while preserving order
     seen: set[str] = set()
-    unique: List[str] = []
+    unique: list[str] = []
     for item in extracted:
         lowered = item.lower()
         if lowered in seen:
