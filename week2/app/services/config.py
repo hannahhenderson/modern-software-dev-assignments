@@ -125,9 +125,14 @@ def get_extraction_method() -> ExtractionMethod:
     if method not in ("heuristic", "llm_detailed", "llm_simple"):
         logger.warning(f"Invalid EXTRACTION_METHOD '{method}', using 'llm_simple'")
         return "llm_simple"
-    return method
+    return method  # type: ignore[return-value]
 
 
 def get_llm_model() -> str:
     """Get the configured LLM model."""
-    return os.getenv("LLM_MODEL", "phi3:mini")
+    model = os.getenv("LLM_MODEL", "phi3:mini")
+    # Validate that it's a supported model
+    if model not in ("qwen2.5:0.5b", "phi3:mini", "llama3.2:1b"):
+        logger.warning(f"Unknown model '{model}', using 'phi3:mini'")
+        return "phi3:mini"
+    return model

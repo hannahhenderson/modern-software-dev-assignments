@@ -4,12 +4,17 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any
 
 from dotenv import load_dotenv
 from ollama import Client
 
-from .config import MAX_ACTION_LENGTH, get_extraction_method, get_llm_config, get_llm_model
+from .config import (
+    MAX_ACTION_LENGTH,
+    LLMConfigDict,
+    get_extraction_method,
+    get_llm_config,
+    get_llm_model,
+)
 from .validation import validate_text_input
 
 # Load environment variables
@@ -95,7 +100,7 @@ except Exception as e:
     logger.warning(f"Failed to pull phi3:mini model: {e}")
 
 
-def _call_llm_with_fallback(text: str, prompt: str, config: dict[str, Any]) -> list[str]:
+def _call_llm_with_fallback(text: str, prompt: str, config: LLMConfigDict) -> list[str]:
     """
     Common LLM calling logic with fallback to heuristic method.
 
