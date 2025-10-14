@@ -14,7 +14,7 @@ load_dotenv()
 client = Client()
 
 # Configuration for extraction method
-EXTRACTION_METHOD = os.getenv("EXTRACTION_METHOD", "ollama")  # "heuristic", "ollama", or "simple_ollama"
+EXTRACTION_METHOD = os.getenv("EXTRACTION_METHOD", "simple_ollama")  # "heuristic", "ollama", or "simple_ollama"
 
 # Model Recommendations (smallest to larger)
 # qwen2.5:0.5b - 0.5B params, very fast, basic extraction

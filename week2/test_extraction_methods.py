@@ -80,7 +80,7 @@ def test_extraction_methods():
     print("  export EXTRACTION_METHOD=ollama       # LLM with phi3:mini")
     print("  export EXTRACTION_METHOD=simple_ollama # LLM with qwen2.5:0.5b")
     print()
-    print("Current setting:", os.getenv("EXTRACTION_METHOD", "ollama"))
+    print("Current setting:", os.getenv("EXTRACTION_METHOD", "simple_ollama"))
 
 if __name__ == "__main__":
     test_extraction_methods()
