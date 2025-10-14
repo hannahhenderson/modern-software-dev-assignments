@@ -121,10 +121,10 @@ def get_llm_config(model: str) -> LLMConfigDict:
 
 def get_extraction_method() -> ExtractionMethod:
     """Get the configured extraction method."""
-    method = os.getenv("EXTRACTION_METHOD", "llm_simple")
+    method = os.getenv("EXTRACTION_METHOD", "heuristic")
     if method not in ("heuristic", "llm_detailed", "llm_simple"):
-        logger.warning(f"Invalid EXTRACTION_METHOD '{method}', using 'llm_simple'")
-        return "llm_simple"
+        logger.warning(f"Invalid EXTRACTION_METHOD '{method}', using 'heuristic'")
+        return "heuristic"
     return method  # type: ignore[return-value]
 
 
