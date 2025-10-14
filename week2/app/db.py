@@ -336,3 +336,35 @@ def mark_action_item_done(action_item_id: int, done: bool) -> None:
     except sqlite3.Error as e:
         logger.error(f"Failed to mark action item {action_item_id} as done: {e}")
         raise RuntimeError(f"Failed to mark action item as done: {e}") from e
+
+
+def get_all_records() -> dict[str, list[sqlite3.Row]]:
+    """
+    Retrieve all records from both notes and action_items tables.
+    
+    Returns:
+        Dictionary containing 'notes' and 'action_items' lists
+        
+    Raises:
+        RuntimeError: If database operation fails
+    """
+    try:
+        with get_connection() as connection:
+            cursor = connection.cursor()
+            
+            # Get all notes
+            cursor.execute("SELECT id, content, created_at FROM notes ORDER BY created_at DESC")
+            notes = list(cursor.fetchall())
+            
+            # Get all action items
+            cursor.execute("SELECT id, note_id, text, done, created_at FROM action_items ORDER BY created_at DESC")
+            action_items = list(cursor.fetchall())
+            
+            logger.info(f"Retrieved {len(notes)} notes and {len(action_items)} action items")
+            return {
+                "notes": notes,
+                "action_items": action_items
+            }
+    except sqlite3.Error as e:
+        logger.error(f"Failed to retrieve all records: {e}")
+        raise RuntimeError(f"Failed to retrieve all records: {e}") from e

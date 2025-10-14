@@ -181,3 +181,51 @@ def mark_done(action_item_id: int, request: MarkDoneRequest) -> MarkDoneResponse
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to mark action item as done: {str(e)}",
         ) from e
+
+
+@router.get("/all-records")
+def get_all_records() -> dict[str, list[dict[str, str | int | bool | None]]]:
+    """
+    Get all records from both notes and action_items tables.
+    
+    Returns:
+        Dictionary containing all notes and action items
+        
+    Raises:
+        HTTPException: If database operation fails
+    """
+    try:
+        records = db.get_all_records()
+        
+        # Convert sqlite3.Row objects to dictionaries for JSON serialization
+        notes = [
+            {
+                "id": row["id"],
+                "content": row["content"],
+                "created_at": row["created_at"],
+            }
+            for row in records["notes"]
+        ]
+        
+        action_items = [
+            {
+                "id": row["id"],
+                "note_id": row["note_id"],
+                "text": row["text"],
+                "done": bool(row["done"]),
+                "created_at": row["created_at"],
+            }
+            for row in records["action_items"]
+        ]
+        
+        logger.info(f"Retrieved all records: {len(notes)} notes, {len(action_items)} action items")
+        return {
+            "notes": notes,
+            "action_items": action_items
+        }
+    except Exception as e:
+        logger.error(f"Failed to get all records: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get all records: {str(e)}",
+        ) from e

@@ -25,6 +25,7 @@
       <label class="row"><input id="save_note" type="checkbox" checked /> Save as note</label>
       <button id="extract">Extract</button>
       <button id="extract-llm">Extract LLM</button>
+      <button id="list-notes">List Notes</button>
     </div>
 
     <div class="items" id="items"></div>
@@ -34,6 +35,7 @@
       const itemsEl = $('#items');
       const btn = $('#extract');
       const btnLLM = $('#extract-llm');
+      const btnListNotes = $('#list-notes');
       
       // Helper function to handle checkbox events
       function setupCheckboxes() {
@@ -98,6 +100,49 @@
         } catch (err) {
           console.error(err);
           itemsEl.textContent = 'Error extracting items with LLM';
+        }
+      });
+      
+      // List Notes button
+      btnListNotes.addEventListener('click', async () => {
+        itemsEl.textContent = 'Loading all records...';
+        try {
+          const res = await fetch('/action-items/all-records', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (!res.ok) throw new Error('Request failed');
+          const data = await res.json();
+          
+          // Display all records (both notes and action items)
+          if (!data.notes && !data.action_items) {
+            itemsEl.innerHTML = '<p class="muted">No records found in database.</p>';
+            return;
+          }
+          
+          let html = '';
+          
+          // Display notes
+          if (data.notes && data.notes.length > 0) {
+            html += '<h3>Notes (' + data.notes.length + ')</h3>';
+            html += data.notes.map(note => 
+              `<div class="item"><strong>Note #${note.id}:</strong> ${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''} <span class="muted">(${note.created_at})</span></div>`
+            ).join('');
+          }
+          
+          // Display action items
+          if (data.action_items && data.action_items.length > 0) {
+            html += '<h3>Action Items (' + data.action_items.length + ')</h3>';
+            html += data.action_items.map(item => 
+              `<div class="item"><input type="checkbox" data-id="${item.id}" ${item.done ? 'checked' : ''} /> <span>${item.text}</span> <span class="muted">(${item.created_at})</span></div>`
+            ).join('');
+          }
+          
+          itemsEl.innerHTML = html;
+          setupCheckboxes();
+        } catch (err) {
+          console.error(err);
+          itemsEl.textContent = 'Error loading records';
         }
       });
 
