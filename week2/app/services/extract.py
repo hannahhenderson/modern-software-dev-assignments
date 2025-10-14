@@ -39,31 +39,52 @@ Cleaning rules:
 - Remove leading prefixes: todo:, action:, next:
 - Keep only the core action text
 
-Output format (required):
-- Return ONLY the cleaned action items
-- One item per line
-- No bullets, numbers, brackets, prefixes, or explanations
-- No code fences, no quotes, no extra text
+CRITICAL: Return ONLY the cleaned action items. Do not add explanations, summaries, or commentary.
 
 Input:
 {text}"""
 
     response = client.chat(
         model='phi3:mini',
-        messages=[{
-            'role': 'user',
-            'content': prompt
-        }],
+        messages=[
+            {
+                'role': 'system', 
+                'content': 'You are a precise action item extractor. Return only cleaned action items, one per line. No explanations or commentary.'
+            },
+            {
+                'role': 'user', 
+                'content': prompt
+            }
+        ],
         options={
             'temperature': 0,  # Maximum determinism
-            'num_predict': 500,  # Limit response length
-            'stop': ["\n\n", "Output Explanation:", "Explanation:", "Note:", "Summary:"]
+            'num_predict': 200,  # Much shorter limit
+            'stop': ["\n\n", "Output Explanation:", "Explanation:", "Note:", "Summary:", "Output:", "Result:", "Here are", "The extracted"]
         }
     )
     
-    # Parse and sanitize response
+    # Parse and validate response
     actions = response['message']['content'].strip().split('\n')
-    return _sanitize_llm_output(actions)
+    validated_actions = _validate_llm_response(actions)
+    return _sanitize_llm_output(validated_actions)
+
+
+def _validate_llm_response(actions: List[str]) -> List[str]:
+    """Validate that response contains only action items, no commentary."""
+    validated = []
+    
+    for action in actions:
+        action = action.strip()
+        if not action:
+            continue
+        # Skip lines that look like commentary
+        if any(commentary in action.lower() for commentary in [
+            'output:', 'result:', 'here are', 'the extracted', 'summary:', 'explanation:'
+        ]):
+            continue
+        validated.append(action)
+    
+    return validated
 
 
 def simple_extract_with_ollama(text: str) -> List[str]:
