@@ -151,11 +151,11 @@ def get_backend_processor():
         'ollama_dev': lambda: create_ollama_processor(
             model=os.getenv('OLLAMA_MODEL', 'llama3.2:3b')
         ),
-        'claude_dev': lambda: create_claude_processor(
+        'claude_cheaper': lambda: create_claude_processor(
             model='claude-haiku-20240307',
             max_tokens=300
         ),
-        'claude_prod': lambda: create_claude_processor(
+        'claude_expensive': lambda: create_claude_processor(
             model='claude-sonnet-4-5',
             max_tokens=1000
         )
@@ -255,8 +255,8 @@ def create_mcp_client():
 async def main():
     import sys
     if len(sys.argv) < 2:
-        print("Usage: python pure_functional_client.py <path_to_server_script>")
-        print("Example: python pure_functional_client.py ../server/petting_zootopia.py")
+        print("Usage: python ai_mcp_client.py <path_to_server_script>")
+        print("Example: python ai_mcp_client.py ../server/petting_zootopia.py")
         sys.exit(1)
     
     # Create client using pure functional composition
