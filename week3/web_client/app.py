@@ -15,16 +15,22 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 # Import our MCP client
-from client.ai_mcp_client import create_mcp_client
+import sys
+sys.path.append(str(Path(__file__).parent.parent / "mcp_client"))
+from ai_mcp_client import create_mcp_client
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Petting Zootopia MCP Web Interface", version="1.0.0")
+
+# Mount static files
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 # Global variable to store the MCP client
 mcp_client = None

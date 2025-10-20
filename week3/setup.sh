@@ -57,8 +57,8 @@ else
 fi
 
 # Make web start script executable
-if [ -f "web/start.sh" ]; then
-    chmod +x web/start.sh
+if [ -f "web_client/start.sh" ]; then
+        chmod +x web_client/start.sh
     echo "✅ Web start script is ready!"
 else
     echo "⚠️  Web start script not found. Make sure you're in the project root."
@@ -127,7 +127,7 @@ case $choice in
         sleep 3
         
         echo "Starting web server (includes MCP client)..."
-        cd web && ./start.sh &
+        cd web_client && ./start.sh &
         WEB_PID=$!
         sleep 3
         
@@ -165,7 +165,7 @@ case $choice in
         echo "  - 'I want a cat picture'"
         echo ""
         echo "Press Ctrl+C to stop"
-        python client/ai_mcp_client.py server/petting_zootopia.py
+        python mcp_client/ai_mcp_client.py server/petting_zootopia.py
         ;;
     3)
         echo "🔧 Starting MCP server only..."

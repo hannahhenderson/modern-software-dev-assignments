@@ -125,6 +125,13 @@
             display: none;
         }
 
+        .sad-animal {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 20px;
@@ -150,7 +157,7 @@
     <div class="container">
         <h1>🐾 Welcome to Petting Zootopia! 🐾</h1>
         
-        <img src="https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=250&fit=crop&crop=center" 
+        <img src="assets/images/petting_zoo_hero.png" 
              alt="Petting Zoo" 
              class="landing-image"
              onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjBGMEYwIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTI1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5QZXR0aW5nIFpvb3RvcGlhPC90ZXh0Pgo8L3N2Zz4K'">
@@ -219,12 +226,32 @@
                 
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('error').style.display = 'block';
-                document.getElementById('error').textContent = `Error: ${error.message}`;
+                showSadAnimal(animalType);
             } finally {
                 // Hide loading
                 document.getElementById('loading').style.display = 'none';
             }
+        }
+
+        function showSadAnimal(animalType) {
+            const sadImages = {
+                'cat': 'assets/images/sad_cat.jpg',
+                'dog': 'assets/images/sad_dog.jpg',
+                'duck': 'assets/images/sad_duck.jpg'
+            };
+            
+            const sadImageUrl = sadImages[animalType] || sadImages['cat'];
+            
+            // Show sad animal image
+            document.getElementById('result-image').src = sadImageUrl;
+            document.getElementById('result').style.display = 'block';
+            
+            // Show error message
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerHTML = `
+                <strong>Sorry, we couldn't find a ${animalType} right now! 😢</strong><br>
+                Here's a sad ${animalType} instead. Please try again later.
+            `;
         }
     </script>
 </body>

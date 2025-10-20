@@ -11,8 +11,8 @@ pkill -f "petting_zootopia.py" 2>/dev/null
 echo "Stopping MCP client..."
 pkill -f "ai_mcp_client.py" 2>/dev/null
 
-# Kill web server
-echo "Stopping web server..."
+# Kill web_client server
+echo "Stopping web_client server..."
 pkill -f "app.py" 2>/dev/null
 
 # Kill any uvicorn processes

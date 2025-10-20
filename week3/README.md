@@ -139,7 +139,7 @@ await cat()                    # Returns: "https://cdn2.thecatapi.com/images/...
 
 ## 🏗️ Architecture
 
-### Web Interface (`web/`)
+### Web Interface (`web_client/`)
 - **Frontend**: HTML/CSS/JavaScript with responsive design
 - **Backend**: FastAPI server with MCP integration
 - **Features**: Visual buttons, loading states, error handling
@@ -151,7 +151,7 @@ await cat()                    # Returns: "https://cdn2.thecatapi.com/images/...
 - **Tools**: 4 animal image tools
 - **APIs**: random-d.uk, dog.ceo, thecatapi.com
 
-### Client (`client/ai_mcp_client.py`)
+### Client (`mcp_client/ai_mcp_client.py`)
 - **Type**: Pure functional Python
 - **Features**: Multi-backend AI support
 - **Backends**: Ollama (local), Claude (cloud)
@@ -166,9 +166,9 @@ await cat()                    # Returns: "https://cdn2.thecatapi.com/images/...
 4. Test with web interface and client
 
 ### Adding New Web Features
-1. Add button to `web/index.html`
-2. Update JavaScript in `web/index.html`
-3. Add API endpoint to `web/app.py`
+1. Add button to `web_client/index.html`
+2. Update JavaScript in `web_client/index.html`
+3. Add API endpoint to `web_client/app.py`
 4. Test the complete flow
 
 ### Adding New AI Backends
@@ -297,7 +297,7 @@ processor_factories = {
 ### 3. Use the New Backend
 
 ```bash
-AI_BACKEND=openai_cheaper python client/ai_mcp_client.py server/petting_zootopia.py
+AI_BACKEND=openai_cheaper python mcp_client/ai_mcp_client.py server/petting_zootopia.py
 ```
 
 ### Benefits of This Functional Design
@@ -338,7 +338,7 @@ ollama serve
 echo $ANTHROPIC_API_KEY
 
 # Test with environment variable
-AI_BACKEND=claude_cheaper python client/ai_mcp_client.py server/petting_zootopia.py
+AI_BACKEND=claude_cheaper python mcp_client/ai_mcp_client.py server/petting_zootopia.py
 ```
 
 ### Server Issues

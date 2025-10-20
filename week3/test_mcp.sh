@@ -25,7 +25,8 @@ timeout 5 python -c "
 import asyncio
 import sys
 sys.path.append('.')
-from client.ai_mcp_client import create_mcp_client
+sys.path.append('./mcp_client')
+from ai_mcp_client import create_mcp_client
 
 async def test_connection():
     client = create_mcp_client()
