@@ -1,0 +1,1 @@
+fastmcp run server/petting-zootopia.py:mcp --transport http --port 8000
