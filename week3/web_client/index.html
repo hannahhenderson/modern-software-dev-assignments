@@ -85,15 +85,6 @@
         .animal-button.dog{ --bg:var(--brown); --bg-hover:#754A32 }
         .animal-button.cat{ --bg:var(--orange); --bg-hover:var(--orange-deep) }
       
-        .result-container{
-          margin-top:24px; padding:20px;
-          background:var(--muted); border-radius:12px; display:none;
-        }
-        .result-container h3{ margin-bottom:12px }
-        .result-image{
-          max-width:100%; max-height:360px; border-radius:12px; box-shadow:var(--shadow);
-          background:#fff;
-        }
       
         .loading{
           display:none; margin:18px 0; text-align:center;
@@ -150,10 +141,6 @@
             Oops! Something went wrong. Please try again.
         </div>
 
-        <div class="result-container" id="result">
-            <h3>Here's your animal!</h3>
-            <img id="result-image" class="result-image" alt="Animal image">
-        </div>
     </div>
 
     <script>
@@ -172,8 +159,7 @@
             isProcessing = true;
             currentRequest = animalType;
             
-            // Hide previous results and errors
-            document.getElementById('result').style.display = 'none';
+            // Hide previous errors
             document.getElementById('error').style.display = 'none';
             
             // Show loading with initial message
@@ -211,62 +197,43 @@
                 const data = await response.json();
                 
                 if (data.success && data.imageUrl) {
-                    console.log('API response received:', data);
-                    console.log('Current request:', currentRequest, 'Animal type:', animalType);
-                    
                     // Check if this is still the current request
                     if (currentRequest !== animalType) {
-                        console.log('Request outdated, ignoring result');
                         return;
                     }
                     
-                    console.log('Processing successful response for:', animalType);
-                    
-                    // Show the result
-                    const resultImage = document.getElementById('result-image');
-                    resultImage.alt = `${data.animal} image`;
-                    
                     // Set up timeout for image loading (10 seconds)
                     const imageTimeout = setTimeout(() => {
-                        console.warn('Image loading timeout:', data.imageUrl);
                         if (currentRequest === animalType) {
                             document.getElementById('loading').style.display = 'none';
                             showSadAnimal(animalType);
                         }
                     }, 10000);
                     
-                    // Set up image loading handlers
-                    resultImage.onload = function() {
-                        console.log('Image loaded successfully:', data.imageUrl);
-                        console.log('Current request:', currentRequest, 'Animal type:', animalType);
-                        
+                    // Create a test image to verify the URL works
+                    const testImage = new Image();
+                    
+                    testImage.onload = function() {
                         // Check if this is still the current request
                         if (currentRequest !== animalType) {
-                            console.log('Request outdated, ignoring image load');
                             return;
                         }
                         
-                        console.log('Updating hero image with:', data.imageUrl);
-                        
-                        // Image loaded successfully - clear timeout and show result
+                        // Image loaded successfully - clear timeout
                         clearTimeout(imageTimeout);
                         document.getElementById('loading').style.display = 'none';
-                        document.getElementById('result').style.display = 'block';
                         
                         // Update hero image to show the animal
                         const heroImage = document.getElementById('hero-image');
                         heroImage.src = data.imageUrl;
                         heroImage.alt = `${data.animal} image`;
                         
-                        console.log('Hero image updated successfully');
-                        
                         // Clear processing state
                         isProcessing = false;
                         currentRequest = null;
                     };
                     
-                    resultImage.onerror = function() {
-                        console.error('Failed to load image:', data.imageUrl);
+                    testImage.onerror = function() {
                         clearTimeout(imageTimeout);
                         if (currentRequest === animalType) {
                             document.getElementById('loading').style.display = 'none';
@@ -278,14 +245,12 @@
                     loadingElement.innerHTML = '🖼️ Loading your animal image... 🖼️';
                     
                     // Start loading the image
-                    console.log('Starting to load image:', data.imageUrl);
-                    resultImage.src = data.imageUrl;
+                    testImage.src = data.imageUrl;
                 } else {
                     throw new Error(data.error || 'No image received');
                 }
                 
             } catch (error) {
-                console.error('Error:', error);
                 // Only show error if this is still the current request
                 if (currentRequest === animalType) {
                     document.getElementById('loading').style.display = 'none';
@@ -307,12 +272,6 @@
             const heroImage = document.getElementById('hero-image');
             heroImage.src = sadImageUrl;
             heroImage.alt = `Sad ${animalType}`;
-            
-            // Show sad animal image in result container too
-            const resultImage = document.getElementById('result-image');
-            resultImage.src = sadImageUrl;
-            resultImage.alt = `Sad ${animalType}`;
-            document.getElementById('result').style.display = 'block';
             
             // Show error message
             document.getElementById('error').style.display = 'block';
