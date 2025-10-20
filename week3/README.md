@@ -103,6 +103,9 @@ A beautiful web interface is available for easy interaction:
 # Install Python dependencies (only if missing)
 pip install fastmcp httpx anthropic python-dotenv requests
 
+# Optional: Install OpenTelemetry for Honeycomb.io tracing
+pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp opentelemetry-instrumentation-httpx opentelemetry-instrumentation-fastapi
+
 # Install Ollama (for local AI) - only if not already installed
 curl -fsSL https://ollama.ai/install.sh | sh
 ```

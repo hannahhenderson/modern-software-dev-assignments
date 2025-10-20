@@ -58,12 +58,14 @@ Based on the user query, determine which tool to call and what parameters to use
 Respond with ONLY a JSON object in this format:
 {{"tool": "tool_name", "parameters": {{"param1": "value1", "param2": "value2"}}}}
 
-If no tool is needed, respond with: {{"tool": null, "parameters": {{}}}}
+If no tool is needed or the query doesn't match any available tools, respond with: {{"tool": null, "parameters": {{}}}}
 
 Examples:
 - "Show me a duck" → {{"tool": "duck", "parameters": {{}}}}
 - "Hello Alice" → {{"tool": "greet", "parameters": {{"name": "Alice"}}}}
 - "Hi there" → {{"tool": "greet", "parameters": {{"name": "there"}}}}
+- "I want a giraffe" → {{"tool": null, "parameters": {{}}}} (no giraffe tool available)
+- "What's the weather?" → {{"tool": null, "parameters": {{}}}} (no weather tool available)
 """
 
         ollama_response = call_ollama(prompt)
@@ -78,7 +80,7 @@ Examples:
                 result = await session.call_tool(tool_name, tool_params)
                 return f"Tool '{tool_name}' called with parameters {tool_params}.\nResult: {result.content}"
             else:
-                return "No tool needed for this query."
+                return "Sorry, I don't have tools available for that request. I can only help with ducks, dogs, cats, greetings, and health checks."
                 
         except json.JSONDecodeError:
             return f"Could not parse Ollama response as JSON: {ollama_response}"

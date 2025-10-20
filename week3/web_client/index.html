@@ -89,7 +89,44 @@
         }
       
         .buttons-container{
-          display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-top:20px;
+          display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:20px;
+        }
+        .input-group{
+          display:flex; gap:8px; max-width:600px; width:100%;
+        }
+        .animal-input{
+          flex:1; padding:12px 16px; border:2px solid var(--muted); border-radius:12px;
+          font-size:16px; background:white; transition:all 0.3s ease;
+          box-shadow:0 2px 8px rgba(0,0,0,0.1);
+        }
+        .animal-input:focus{
+          outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(244,162,89,0.2);
+        }
+        .submit-button{
+          padding:12px 20px; border:none; border-radius:12px; font-size:16px; font-weight:600;
+          background:var(--orange); color:white; cursor:pointer; transition:all 0.3s ease;
+          box-shadow:0 4px 12px rgba(244,162,89,0.3); white-space:nowrap;
+        }
+        .submit-button:hover{
+          transform:translateY(-2px); box-shadow:0 6px 20px rgba(244,162,89,0.4);
+        }
+        .quick-buttons{
+          display:flex; gap:8px; justify-content:center; flex-wrap:wrap;
+        }
+        .quick-button{
+          padding:8px 16px; border:2px solid var(--muted); border-radius:8px; font-size:14px;
+          background:white; color:var(--ink); cursor:pointer; transition:all 0.3s ease;
+          box-shadow:0 2px 4px rgba(0,0,0,0.1);
+        }
+        .quick-button:hover{
+          border-color:var(--orange); background:var(--orange); color:white;
+          transform:translateY(-1px);
+        }
+        .quick-button.reset{
+          border-color:var(--sage); color:var(--sage);
+        }
+        .quick-button.reset:hover{
+          background:var(--sage); color:white;
         }
       
         .animal-button{
@@ -231,18 +268,19 @@
              <p class="tagline">Browse a friendly menagerie — cat, duck, and dog.</p>
 
         <div class="buttons-container">
-            <button class="animal-button duck" onclick="requestAnimal('duck')">
-                🦆 Duck
-            </button>
-            <button class="animal-button dog" onclick="requestAnimal('dog')">
-                🐶 Dog
-            </button>
-            <button class="animal-button cat" onclick="requestAnimal('cat')">
-                🐱 Cat
-            </button>
-            <button class="animal-button" onclick="resetHeroImage()" style="--bg: var(--sage); --bg-hover: #8FAF6B;">
-                🏠 Reset
-            </button>
+            <div class="input-group">
+                <input type="text" id="animalInput" placeholder="Ask for any animal! (e.g., 'I want a duck', 'show me a cat', 'get me a dog')" 
+                       class="animal-input" onkeypress="handleKeyPress(event)">
+                <button class="submit-button" onclick="submitRequest()">
+                    🐾 Get Animal
+                </button>
+            </div>
+            <div class="quick-buttons">
+                <button class="quick-button" onclick="setInput('I want a duck')">🦆 Duck</button>
+                <button class="quick-button" onclick="setInput('I want a dog')">🐶 Dog</button>
+                <button class="quick-button" onclick="setInput('I want a cat')">🐱 Cat</button>
+                <button class="quick-button reset" onclick="resetHeroImage()">🏠 Reset</button>
+            </div>
         </div>
 
         <div class="loading" id="loading">
@@ -262,6 +300,101 @@
         // Global state management
         let isProcessing = false;
         let currentRequest = null;
+        
+        function setInput(text) {
+            document.getElementById('animalInput').value = text;
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                submitRequest();
+            }
+        }
+        
+        async function submitRequest() {
+            const input = document.getElementById('animalInput');
+            const query = input.value.trim();
+            
+            if (!query) {
+                showError('Please enter what animal you want!');
+                return;
+            }
+            
+            // Prevent multiple simultaneous requests
+            if (isProcessing) {
+                console.log('Request already in progress, ignoring...');
+                return;
+            }
+            
+            // Set processing state
+            isProcessing = true;
+            currentRequest = query;
+            
+            // Hide previous errors
+            document.getElementById('error').style.display = 'none';
+            
+            // Show loading with playful message
+            const loadingElement = document.getElementById('loading');
+            loadingElement.style.display = 'block';
+            
+            const playfulMessages = [
+                '🐾 The animals are getting ready... 🐾',
+                '🦆 Duck is waddling over... 🦆',
+                '🐶 Dog is fetching your image... 🐶', 
+                '🐱 Cat is stretching and preparing... 🐱',
+                '🌟 The petting zoo is buzzing with activity... 🌟'
+            ];
+            
+            const randomMessage = playfulMessages[Math.floor(Math.random() * playfulMessages.length)];
+            loadingElement.innerHTML = randomMessage;
+            
+            // Store original hero image for potential restoration
+            const heroImage = document.getElementById('hero-image');
+            const originalHeroSrc = heroImage.src;
+            
+            // Reset hero image to original if it was showing a sad animal
+            if (heroImage.src.includes('sad_')) {
+                heroImage.src = 'assets/images/petting_zoo_hero.png';
+                heroImage.alt = 'Petting Zoo';
+            }
+            
+            try {
+                // Send request to our backend
+                const response = await fetch('/api/animal', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                const data = await response.json();
+                
+                // Check if this is still the current request
+                if (currentRequest !== query) {
+                    console.log('Request outdated, ignoring response');
+                    return;
+                }
+                
+                if (data.success) {
+                    showSuccess(data.imageUrl, data.animal || 'animal');
+                } else if (data.noTools) {
+                    showNoTools(data.message || 'Sorry, I don\'t have tools for that request!');
+                } else {
+                    showError(data.error || 'Failed to fetch animal');
+                }
+            } catch (error) {
+                if (currentRequest === query) {
+                    console.error('Error:', error);
+                    showError('Network error. Please try again.');
+                }
+            } finally {
+                if (currentRequest === query) {
+                    isProcessing = false;
+                    currentRequest = null;
+                }
+            }
+        }
         
         async function requestAnimal(animalType) {
             // Prevent multiple simultaneous requests
@@ -401,6 +534,59 @@
             }
         }
 
+        function showError(message) {
+            const errorElement = document.getElementById('error');
+            errorElement.innerHTML = message;
+            errorElement.style.display = 'block';
+            
+            // Show sad animal image
+            showSadAnimal('cat'); // Default to sad cat
+        }
+        
+        function showSuccess(imageUrl, animalType) {
+            // Hide loading and error messages
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            
+            // Update hero image to show the animal
+            const heroImage = document.getElementById('hero-image');
+            heroImage.style.filter = 'none'; // Clear filter first
+            heroImage.src = imageUrl;
+            heroImage.alt = `${animalType} image`;
+            heroImage.style.objectFit = 'scale-down';
+            heroImage.style.boxShadow = 'none';
+            
+            // Add a playful success animation
+            heroImage.style.animation = 'celebrate 0.6s ease-out';
+            
+            // Apply shadow after a brief delay to avoid transition lag
+            setTimeout(() => {
+                heroImage.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))';
+            }, 100);
+            
+            // Clear processing state
+            isProcessing = false;
+            currentRequest = null;
+        }
+        
+        function showNoTools(message) {
+            // Hide loading
+            document.getElementById('loading').style.display = 'none';
+            
+            const errorElement = document.getElementById('error');
+            errorElement.innerHTML = `🤷‍♀️ ${message}<br><small>Try asking for a duck, dog, or cat!</small>`;
+            errorElement.style.display = 'block';
+            
+            // Show a confused animal or keep the original hero image
+            const heroImage = document.getElementById('hero-image');
+            heroImage.src = 'assets/images/petting_zoo_hero.png';
+            heroImage.alt = 'Petting Zoo - Try asking for duck, dog, or cat';
+            
+            // Clear processing state
+            isProcessing = false;
+            currentRequest = null;
+        }
+        
         function showSadAnimal(animalType) {
             const sadImages = {
                 'cat': 'assets/images/sad_cat.jpg',

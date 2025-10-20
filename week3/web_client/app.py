@@ -81,8 +81,8 @@ async def get_animal(request: dict):
     
     Expected request body:
     {
-        "animal": "duck|dog|cat",
-        "message": "I want a duck!"
+        "query": "I want a duck!",
+        "animal": "duck|dog|cat" (optional, for backward compatibility)
     }
     """
     global mcp_client
@@ -91,19 +91,30 @@ async def get_animal(request: dict):
         raise HTTPException(status_code=500, detail="MCP client not initialized")
     
     try:
-        animal_type = request.get("animal", "").lower()
-        message = request.get("message", f"I want a {animal_type}!")
+        # Handle new query format or fallback to old format
+        query = request.get("query")
+        if not query:
+            # Backward compatibility
+            animal_type = request.get("animal", "").lower()
+            query = f"I want a {animal_type}!"
         
-        if animal_type not in ["duck", "dog", "cat"]:
-            raise HTTPException(status_code=400, detail="Invalid animal type. Must be duck, dog, or cat")
-        
-        logger.info(f"Processing request for {animal_type}: {message}")
+        logger.info(f"Processing query: {query}")
         
         # Use the MCP client to process the query - this is the proper MCP flow!
-        result = await mcp_client["process_query"](message)
+        result = await mcp_client["process_query"](query)
         
         if not result or not result.strip():
             raise HTTPException(status_code=500, detail="No result from MCP client")
+        
+        # Check if the MCP client indicates no tools are available
+        if "no tools" in result.lower() or "no available tools" in result.lower() or "i don't have" in result.lower():
+            logger.info("MCP client indicates no tools available for this query")
+            return {
+                "success": False,
+                "noTools": True,
+                "message": "Sorry, I don't have tools for that request! Try asking for a duck, dog, or cat.",
+                "query": query
+            }
         
         # Extract the actual image URL from the MCP response
         # The MCP client returns a conversation that includes metadata
@@ -116,17 +127,30 @@ async def get_animal(request: dict):
         
         if not urls:
             logger.error(f"No URL found in MCP response: {result}")
-            raise HTTPException(status_code=500, detail="No image URL found in response")
+            return {
+                "success": False,
+                "error": "No image URL found in response",
+                "query": query
+            }
         
         # Use the first URL found (should be the image URL)
         image_url = urls[0]
         logger.info(f"Extracted image URL: {image_url}")
         
+        # Try to determine animal type from the query for better UX
+        animal_type = "animal"
+        if "duck" in query.lower():
+            animal_type = "duck"
+        elif "dog" in query.lower():
+            animal_type = "dog"
+        elif "cat" in query.lower():
+            animal_type = "cat"
+        
         return {
             "success": True,
             "imageUrl": image_url,
             "animal": animal_type,
-            "message": message
+            "message": query
         }
         
     except HTTPException:
