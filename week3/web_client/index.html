@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -35,7 +35,7 @@
             color: #333;
             font-size: 2.5em;
             margin-bottom: 20px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: linear-gradient(45deg, #ff6b6b, #ff9ff3, #54a0ff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -60,7 +60,7 @@
         }
 
         .animal-button {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            background: linear-gradient(45deg, #ff6b6b, #ff9ff3);
             color: white;
             border: none;
             padding: 15px 25px;
@@ -82,7 +82,7 @@
             transform: translateY(-1px);
         }
 
-        .animal-button.rabbit {
+        .animal-button.duck {
             background: linear-gradient(45deg, #ff9ff3, #f368e0);
         }
 
@@ -91,7 +91,7 @@
         }
 
         .animal-button.cat {
-            background: linear-gradient(45deg, #5f27cd, #341f97);
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
         }
 
         .result-container {
@@ -163,8 +163,8 @@
              onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjBGMEYwIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTI1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5QZXR0aW5nIFpvb3RvcGlhPC90ZXh0Pgo8L3N2Zz4K'">
         
         <div class="buttons-container">
-            <button class="animal-button rabbit" onclick="requestAnimal('rabbit')">
-                🐰 Rabbit
+            <button class="animal-button duck" onclick="requestAnimal('duck')">
+                🦆 Duck
             </button>
             <button class="animal-button dog" onclick="requestAnimal('dog')">
                 🐶 Dog
@@ -194,8 +194,10 @@
             document.getElementById('result').style.display = 'none';
             document.getElementById('error').style.display = 'none';
             
-            // Show loading
-            document.getElementById('loading').style.display = 'block';
+            // Show loading with initial message
+            const loadingElement = document.getElementById('loading');
+            loadingElement.style.display = 'block';
+            loadingElement.innerHTML = '🐾 Finding your perfect animal... 🐾';
             
             try {
                 // Send request to our backend
@@ -218,18 +220,45 @@
                 
                 if (data.success && data.imageUrl) {
                     // Show the result
-                    document.getElementById('result-image').src = data.imageUrl;
-                    document.getElementById('result').style.display = 'block';
+                    const resultImage = document.getElementById('result-image');
+                    resultImage.alt = `${data.animal} image`;
+                    
+                    // Set up timeout for image loading (10 seconds)
+                    const imageTimeout = setTimeout(() => {
+                        console.warn('Image loading timeout:', data.imageUrl);
+                        document.getElementById('loading').style.display = 'none';
+                        showSadAnimal(animalType);
+                    }, 10000);
+                    
+                    // Set up image loading handlers
+                    resultImage.onload = function() {
+                        // Image loaded successfully - clear timeout and show result
+                        clearTimeout(imageTimeout);
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('result').style.display = 'block';
+                    };
+                    
+                    resultImage.onerror = function() {
+                        console.error('Failed to load image:', data.imageUrl);
+                        clearTimeout(imageTimeout);
+                        document.getElementById('loading').style.display = 'none';
+                        showSadAnimal(animalType);
+                    };
+                    
+                    // Update loading message
+                    loadingElement.innerHTML = '🖼️ Loading your animal image... 🖼️';
+                    
+                    // Start loading the image
+                    resultImage.src = data.imageUrl;
                 } else {
                     throw new Error(data.error || 'No image received');
                 }
                 
             } catch (error) {
                 console.error('Error:', error);
-                showSadAnimal(animalType);
-            } finally {
-                // Hide loading
+                // Hide loading and show error
                 document.getElementById('loading').style.display = 'none';
+                showSadAnimal(animalType);
             }
         }
 
@@ -243,7 +272,9 @@
             const sadImageUrl = sadImages[animalType] || sadImages['cat'];
             
             // Show sad animal image
-            document.getElementById('result-image').src = sadImageUrl;
+            const resultImage = document.getElementById('result-image');
+            resultImage.src = sadImageUrl;
+            resultImage.alt = `Sad ${animalType}`;
             document.getElementById('result').style.display = 'block';
             
             // Show error message

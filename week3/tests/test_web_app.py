@@ -13,12 +13,10 @@ from pathlib import Path
 
 # Add the parent directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
-
-import sys
 sys.path.append(str(Path(__file__).parent.parent / "web_client"))
-from app import app
-import sys
 sys.path.append(str(Path(__file__).parent.parent / "mcp_client"))
+
+from app import app
 from ai_mcp_client import create_mcp_client
 
 
@@ -108,8 +106,8 @@ class TestWebAppMCPIntegration:
         assert "Invalid animal type" in data["detail"]
 
 
-class TestWebAppErrorHandling:
-    """Test web app error handling with sad animal images."""
+class TestWebAppGracefulFailure:
+    """Test web app graceful failure scenarios with sad animal images."""
     
     @pytest.fixture
     async def client(self):
@@ -118,40 +116,135 @@ class TestWebAppErrorHandling:
             yield client
     
     @pytest.mark.asyncio
-    async def test_sad_cat_display_on_error(self, client):
-        """Test that sad cat image is displayed when cat request fails."""
-        # This would be implemented in the frontend JavaScript
-        # For now, we test that the API returns appropriate error
-        with patch('app.mcp_client', None):  # Simulate no MCP client
+    async def test_mcp_client_not_initialized(self, client):
+        """Test graceful failure when MCP client is not initialized."""
+        with patch('app.mcp_client', None):
             response = await client.post("/api/animal", json={
                 "animal": "cat",
                 "message": "I want a cat!"
             })
             
             assert response.status_code == 500
-            # Frontend would handle displaying sad cat image
+            data = response.json()
+            assert "MCP client not initialized" in data["detail"]
     
     @pytest.mark.asyncio
-    async def test_sad_dog_display_on_error(self, client):
-        """Test that sad dog image is displayed when dog request fails."""
-        with patch('app.mcp_client', None):
+    async def test_mcp_server_connection_failure(self, client, mock_mcp_client):
+        """Test graceful failure when MCP server connection fails."""
+        with patch('app.mcp_client', mock_mcp_client):
+            # Simulate MCP server connection failure
+            mock_mcp_client["process_query"].side_effect = ConnectionError("Cannot connect to MCP server")
+            
+            response = await client.post("/api/animal", json={
+                "animal": "cat",
+                "message": "I want a cat!"
+            })
+            
+            assert response.status_code == 500
+            data = response.json()
+            assert "Internal server error" in data["detail"]
+    
+    @pytest.mark.asyncio
+    async def test_external_api_timeout(self, client, mock_mcp_client):
+        """Test graceful failure when external API times out."""
+        with patch('app.mcp_client', mock_mcp_client):
+            # Simulate external API timeout
+            mock_mcp_client["process_query"].side_effect = TimeoutError("External API timeout")
+            
             response = await client.post("/api/animal", json={
                 "animal": "dog",
                 "message": "I want a dog!"
             })
             
             assert response.status_code == 500
+            data = response.json()
+            assert "Internal server error" in data["detail"]
     
     @pytest.mark.asyncio
-    async def test_sad_duck_display_on_error(self, client):
-        """Test that sad duck image is displayed when duck request fails."""
-        with patch('app.mcp_client', None):
+    async def test_mcp_tool_execution_failure(self, client, mock_mcp_client):
+        """Test graceful failure when MCP tool execution fails."""
+        with patch('app.mcp_client', mock_mcp_client):
+            # Simulate MCP tool execution failure
+            mock_mcp_client["process_query"].side_effect = Exception("Tool execution failed")
+            
             response = await client.post("/api/animal", json={
                 "animal": "duck",
                 "message": "I want a duck!"
             })
             
             assert response.status_code == 500
+            data = response.json()
+            assert "Internal server error" in data["detail"]
+    
+    @pytest.mark.asyncio
+    async def test_invalid_json_request(self, client):
+        """Test graceful failure with invalid JSON request."""
+        response = await client.post("/api/animal", 
+            content="invalid json",
+            headers={"Content-Type": "application/json"}
+        )
+        
+        assert response.status_code == 422  # FastAPI validation error
+    
+    @pytest.mark.asyncio
+    async def test_missing_required_fields(self, client):
+        """Test graceful failure with missing required fields."""
+        response = await client.post("/api/animal", json={
+            "animal": "cat"
+            # Missing "message" field
+        })
+        
+        assert response.status_code == 422  # FastAPI validation error
+    
+    @pytest.mark.asyncio
+    async def test_empty_animal_type(self, client):
+        """Test graceful failure with empty animal type."""
+        response = await client.post("/api/animal", json={
+            "animal": "",
+            "message": "I want an animal!"
+        })
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "Invalid animal type" in data["detail"]
+    
+    @pytest.mark.asyncio
+    async def test_unsupported_animal_type(self, client):
+        """Test graceful failure with unsupported animal type."""
+        response = await client.post("/api/animal", json={
+            "animal": "elephant",
+            "message": "I want an elephant!"
+        })
+        
+        assert response.status_code == 400
+        data = response.json()
+        assert "Invalid animal type" in data["detail"]
+    
+    @pytest.mark.asyncio
+    async def test_concurrent_request_failure(self, client, mock_mcp_client):
+        """Test graceful failure under concurrent load."""
+        with patch('app.mcp_client', mock_mcp_client):
+            # Simulate resource exhaustion
+            mock_mcp_client["process_query"].side_effect = Exception("Resource exhausted")
+            
+            # Simulate multiple concurrent requests
+            tasks = []
+            for i in range(5):
+                task = client.post("/api/animal", json={
+                    "animal": "cat",
+                    "message": f"I want a cat! (Request {i})"
+                })
+                tasks.append(task)
+            
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # All requests should fail gracefully
+            for response in responses:
+                if isinstance(response, Exception):
+                    # Some requests might raise exceptions due to resource exhaustion
+                    assert "Resource exhausted" in str(response)
+                else:
+                    assert response.status_code == 500
 
 
 class TestMCPClientLLMParsing:
