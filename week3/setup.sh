@@ -73,13 +73,17 @@ else
     echo "✅ Ollama already installed!"
 fi
 
-# Start Ollama service
+# Start Ollama service (only if not already running)
 echo "🚀 Starting Ollama service..."
-ollama serve &
-OLLAMA_PID=$!
-
-# Wait a moment for Ollama to start
-sleep 3
+if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+    echo "✅ Ollama is already running!"
+else
+    echo "Starting Ollama..."
+    ollama serve &
+    OLLAMA_PID=$!
+    # Wait a moment for Ollama to start
+    sleep 3
+fi
 
 # Pull the model (only if not already present)
 echo "📥 Checking for Llama 3.2 model..."
@@ -135,6 +139,22 @@ case $choice in
         echo "   Web server PID: $WEB_PID"
         echo ""
         echo "Press Ctrl+C to stop all services"
+        
+        # Function to cleanup on exit
+        cleanup() {
+            echo ""
+            echo "🛑 Stopping all services..."
+            kill $MCP_SERVER_PID 2>/dev/null
+            kill $MCP_CLIENT_PID 2>/dev/null
+            kill $WEB_PID 2>/dev/null
+            echo "✅ All services stopped"
+            exit 0
+        }
+        
+        # Set up signal handlers
+        trap cleanup SIGINT SIGTERM
+        
+        # Wait for any process to exit
         wait
         ;;
     2)
