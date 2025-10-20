@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petting Zootopia</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .landing-image {
+            width: 100%;
+            max-width: 400px;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .buttons-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .animal-button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            min-width: 120px;
+        }
+
+        .animal-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .animal-button:active {
+            transform: translateY(-1px);
+        }
+
+        .animal-button.rabbit {
+            background: linear-gradient(45deg, #ff9ff3, #f368e0);
+        }
+
+        .animal-button.dog {
+            background: linear-gradient(45deg, #54a0ff, #2e86de);
+        }
+
+        .animal-button.cat {
+            background: linear-gradient(45deg, #5f27cd, #341f97);
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            display: none;
+        }
+
+        .result-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .loading {
+            display: none;
+            color: #667eea;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+
+        .error {
+            color: #e74c3c;
+            background: #ffe6e6;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .buttons-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .animal-button {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐾 Welcome to Petting Zootopia! 🐾</h1>
+        
+        <img src="https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=250&fit=crop&crop=center" 
+             alt="Petting Zoo" 
+             class="landing-image"
+             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjBGMEYwIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTI1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5QZXR0aW5nIFpvb3RvcGlhPC90ZXh0Pgo8L3N2Zz4K'">
+        
+        <div class="buttons-container">
+            <button class="animal-button rabbit" onclick="requestAnimal('rabbit')">
+                🐰 Rabbit
+            </button>
+            <button class="animal-button dog" onclick="requestAnimal('dog')">
+                🐶 Dog
+            </button>
+            <button class="animal-button cat" onclick="requestAnimal('cat')">
+                🐱 Cat
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            🐾 Finding your perfect animal... 🐾
+        </div>
+
+        <div class="error" id="error">
+            Oops! Something went wrong. Please try again.
+        </div>
+
+        <div class="result-container" id="result">
+            <h3>Here's your animal!</h3>
+            <img id="result-image" class="result-image" alt="Animal image">
+        </div>
+    </div>
+
+    <script>
+        async function requestAnimal(animalType) {
+            // Hide previous results and errors
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            
+            try {
+                // Send request to our backend
+                const response = await fetch('/api/animal', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        animal: animalType,
+                        message: `I want a ${animalType}!`
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success && data.imageUrl) {
+                    // Show the result
+                    document.getElementById('result-image').src = data.imageUrl;
+                    document.getElementById('result').style.display = 'block';
+                } else {
+                    throw new Error(data.error || 'No image received');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = `Error: ${error.message}`;
+            } finally {
+                // Hide loading
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

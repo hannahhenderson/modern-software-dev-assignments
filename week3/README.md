@@ -9,6 +9,15 @@ A Model Context Protocol (MCP) server that provides animal image tools with AI-p
 - **`dog()`** - Get a random dog image from dog.ceo
 - **`cat()`** - Get a random cat image from thecatapi.com
 
+## 🌐 Web Interface
+
+A beautiful web interface is available for easy interaction:
+
+- **🎨 Modern UI** - Responsive design with smooth animations
+- **🖼️ Visual Interface** - Click buttons to get animal images
+- **🔗 REST API** - FastAPI backend with MCP integration
+- **📱 Mobile Friendly** - Works on all devices
+
 ## 🚀 Quick Start
 
 ### 1. Automated Setup (Recommended)
@@ -41,7 +50,17 @@ ollama pull llama3.2:3b
 python server/petting_zootopia.py
 ```
 
-### 4. Use the AI Client
+### 4. Use the Web Interface (Easiest)
+```bash
+# Start the web server
+cd web
+./start.sh
+
+# Open your browser to:
+# http://localhost:8000
+```
+
+### 5. Use the AI Client (Advanced)
 ```bash
 # Use with Ollama (free, local)
 python client/ai_mcp_client.py server/petting_zootopia.py
@@ -85,6 +104,16 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 ## 📖 Usage Examples
 
+### Web Interface (Recommended)
+```bash
+# Start the web server
+cd web
+./start.sh
+
+# Open http://localhost:8000
+# Click the animal buttons to get images!
+```
+
 ### Direct Tool Calls
 ```python
 # The server provides these tools:
@@ -108,6 +137,12 @@ Query: Get me a dog
 
 ## 🏗️ Architecture
 
+### Web Interface (`web/`)
+- **Frontend**: HTML/CSS/JavaScript with responsive design
+- **Backend**: FastAPI server with MCP integration
+- **Features**: Visual buttons, loading states, error handling
+- **Port**: 8000 (http://localhost:8000)
+
 ### Server (`server/petting_zootopia.py`)
 - **Type**: FastMCP server
 - **Transport**: STDIO (local communication)
@@ -126,17 +161,152 @@ Query: Get me a dog
 1. Add tool function to `server/petting_zootopia.py`
 2. Use `@mcp.tool` decorator
 3. Add proper error handling
-4. Test with client
+4. Test with web interface and client
+
+### Adding New Web Features
+1. Add button to `web/index.html`
+2. Update JavaScript in `web/index.html`
+3. Add API endpoint to `web/app.py`
+4. Test the complete flow
 
 ### Adding New AI Backends
-See `ADDING_BACKENDS.md` for detailed instructions.
+See the "Adding New AI Backends" section below for detailed instructions.
 
-## 📚 Documentation
+## ⚙️ Advanced Configuration
 
-- **`CLIENT_CONFIG.md`** - Detailed client configuration
-- **`ADDING_BACKENDS.md`** - How to add new AI backends
-- **`server/petting_zootopia.py`** - Server implementation
-- **`client/ai_mcp_client.py`** - AI client implementation
+### Environment Variables
+
+Create a `.env` file in your project root:
+
+```bash
+# AI Backend Configuration
+# Choose one of: ollama_dev, claude_cheaper, claude_expensive
+AI_BACKEND=ollama_dev
+
+# Ollama Configuration (when AI_BACKEND=ollama_dev)
+OLLAMA_MODEL=llama3.2:3b
+
+# Claude Configuration (when AI_BACKEND starts with claude)
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+```
+
+### Detailed Backend Setup
+
+#### Ollama (Recommended for Learning)
+```bash
+AI_BACKEND=ollama_dev
+OLLAMA_MODEL=llama3.2:3b
+```
+- ✅ **Free** - no API costs
+- ✅ **Local** - runs on your machine
+- ✅ **Offline** - no internet required
+- ✅ **Fast** - no network latency
+
+#### Claude Cheaper (Haiku)
+```bash
+AI_BACKEND=claude_cheaper
+ANTHROPIC_API_KEY=your_key_here
+```
+- 💰 **Cheap** - $0.25/$1.25 per 1M tokens
+- 🌐 **Online** - requires internet
+- ⚡ **Fast** - good for development
+- 🎯 **Model**: Claude Haiku
+
+#### Claude Expensive (Sonnet)
+```bash
+AI_BACKEND=claude_expensive
+ANTHROPIC_API_KEY=your_key_here
+```
+- 💰 **Expensive** - $3.00/$15.00 per 1M tokens
+- 🌐 **Online** - requires internet
+- 🎯 **Best Quality** - for production use
+- 🎯 **Model**: Claude Sonnet 4.5
+
+### Virtual Environment Setup
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+## 🔧 Adding New AI Backends
+
+The client uses pure functional programming with function factories. Here's how to add new backends:
+
+### 1. Create the Processor Function
+
+```python
+def create_openai_processor(model: str, max_tokens: int):
+    """Create an OpenAI processor using pure functional composition"""
+    openai = OpenAI()
+    
+    async def process_query(query: str, available_tools: list, session: ClientSession) -> str:
+        """Process query using OpenAI"""
+        messages = [{"role": "user", "content": query}]
+
+        # OpenAI API call
+        response = openai.chat.completions.create(
+            model=model,
+            max_tokens=max_tokens,
+            messages=messages,
+            tools=available_tools
+        )
+
+        # Process response and handle tool calls
+        final_text = []
+        for choice in response.choices:
+            if choice.message.content:
+                final_text.append(choice.message.content)
+            
+            if choice.message.tool_calls:
+                for tool_call in choice.message.tool_calls:
+                    tool_name = tool_call.function.name
+                    tool_args = json.loads(tool_call.function.arguments)
+                    
+                    # Execute tool call
+                    result = await session.call_tool(tool_name, tool_args)
+                    final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
+                    final_text.append(f"Result: {result.content}")
+
+        return "\n".join(final_text)
+    
+    return process_query  # Returns a function, not a class
+```
+
+### 2. Add to Factory Functions
+
+```python
+processor_factories = {
+    # ... existing backends ...
+    'openai_cheaper': lambda: create_openai_processor(
+        model=os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo'),
+        max_tokens=int(os.getenv('OPENAI_MAX_TOKENS', '500'))
+    ),
+    'openai_expensive': lambda: create_openai_processor(
+        model=os.getenv('OPENAI_MODEL', 'gpt-4'),
+        max_tokens=int(os.getenv('OPENAI_MAX_TOKENS', '1000'))
+    )
+}
+```
+
+### 3. Use the New Backend
+
+```bash
+AI_BACKEND=openai_cheaper python client/ai_mcp_client.py server/petting_zootopia.py
+```
+
+### Benefits of This Functional Design
+
+- ✅ **Zero classes** - pure functional programming
+- ✅ **Function factories** - create configured functions
+- ✅ **Closures** - capture state without classes
+- ✅ **Higher-order functions** - functions that return functions
+- ✅ **Function composition** - combine functions elegantly
+- ✅ **Pure functions** - no side effects
+- ✅ **Easy to extend** - just add to factory functions
 
 ## 🎯 Assignment Requirements
 
@@ -177,6 +347,19 @@ python server/petting_zootopia.py
 # Should show: "MCP server started"
 ```
 
+### Web Interface Issues
+```bash
+# Check web server dependencies
+cd web
+pip install -r requirements.txt
+
+# Start web server
+./start.sh
+
+# Check if running on http://localhost:8000
+curl http://localhost:8000/api/health
+```
+
 ## 📄 License
 
-This project is part of the Stanford Modern Software Development course.
+This project is part of the [Stanford Modern Software Development](https://themodernsoftware.dev/) course.
