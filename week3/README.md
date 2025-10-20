@@ -10,8 +10,9 @@ A Model Context Protocol (MCP) server that provides animal image tools with AI-p
 |------|-------------|------------|---------|---------|
 | `greet` | Greet someone by name | `name: str` | Greeting message | `greet("Alice")` → `"Hello, Alice!"` |
 | `duck` | Get a random duck GIF | None | Duck image URL | `duck()` → `"https://random-d.uk/api/v2/random.gif"` |
-| `dog` | Get a random dog image | None | Dog image URL | `dog()` → `"https://images.dog.ceo/breeds/..."` |
+| `dog` | Get a random dog image | None | Dog image URL | `dog()` → `"https://random.dog/abc123.jpg"` |
 | `cat` | Get a random cat image | None | Cat image URL | `cat()` → `"https://cdn2.thecatapi.com/images/..."` |
+| `ping` | Check if MCP server is running | None | Server status | `ping()` → `"pong"` |
 
 ### Tool Details
 
@@ -46,20 +47,30 @@ A Model Context Protocol (MCP) server that provides animal image tools with AI-p
 - **Rate Limits**: 10 requests/minute
 - **Example Usage**: `cat()` → `"https://cdn2.thecatapi.com/images/cov.jpg"`
 
+#### `ping() -> str`
+- **Purpose**: Simple ping endpoint to check if the MCP server is running
+- **Parameters**: None
+- **Returns**: Server status confirmation
+- **Features**: Lightweight server health check, no external API calls
+- **Example Usage**: `ping()` → `"pong"`
+
 ### Error Handling
 
 All tools include robust error handling for:
 - **Network timeouts** (10 second timeout)
 - **HTTP errors** (4xx, 5xx status codes)
-- **API rate limits** (user-friendly messages)
+- **API rate limits** (exponential backoff with user-friendly messages)
 - **Empty responses** (graceful fallbacks)
+- **Input validation** (parameter validation with clear error messages)
+- **Health monitoring** (comprehensive API health checks)
 
 ### Expected Behaviors
 
 - **Success**: Returns image URL as string
-- **Timeout**: Returns `"Error: Request timed out while fetching [animal]"`
-- **HTTP Error**: Returns `"Error: HTTP [status_code] while fetching [animal]"`
-- **Rate Limit**: Returns `"Error: Rate limit exceeded for [animal] API"`
+- **Timeout**: Returns user-friendly message: `"🐾 The [animal]s are being shy and taking their time. Please try again!"`
+- **HTTP Error**: Returns contextual message: `"🐾 The [animal] API is having a nap. Please try again later!"`
+- **Rate Limit**: Returns backoff message: `"🐾 The [animal] API is busy right now. The animals are taking a break! Please try again in a moment."`
+- **Validation Error**: Returns clear validation message: `"🐾 That doesn't look like a valid [animal] request. Please try again!"`
 - **Empty Response**: Returns `"No [animal] images available"`
 
 ## 🌐 Web Interface
