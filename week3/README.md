@@ -13,6 +13,7 @@ A Model Context Protocol (MCP) server that provides animal image tools with AI-p
 | `dog` | Get a random dog image | None | Dog image URL | `dog()` → `"https://random.dog/abc123.jpg"` |
 | `cat` | Get a random cat image | None | Cat image URL | `cat()` → `"https://cdn2.thecatapi.com/images/..."` |
 | `ping` | Check if MCP server is running | None | Server status | `ping()` → `"pong"` |
+| `health_check` | Check external API health status | None | Health report | `health_check()` → `"Overall Status: HEALTHY..."` |
 
 ### Tool Details
 
@@ -53,6 +54,13 @@ A Model Context Protocol (MCP) server that provides animal image tools with AI-p
 - **Returns**: Server status confirmation
 - **Features**: Lightweight server health check, no external API calls
 - **Example Usage**: `ping()` → `"pong"`
+
+#### `health_check() -> str`
+- **Purpose**: Check the health status of all external APIs
+- **Parameters**: None
+- **Returns**: Comprehensive health report
+- **Features**: Tests all APIs, reports status, provides diagnostics
+- **Example Usage**: `health_check()` → `"Overall Status: HEALTHY\nHealthy APIs: 3/3\n..."`
 
 ### Error Handling
 

@@ -159,6 +159,29 @@ def ping() -> str:
         return f"Ping failed: {str(e)}"
 
 
+@mcp.tool
+async def health_check() -> str:
+    """Check the health status of all external APIs."""
+    try:
+        logger.info("Performing health check on all APIs")
+        health_status = await get_health_status()
+        
+        # Format the health status for display
+        status_summary = f"Overall Status: {health_status['status'].upper()}\n"
+        status_summary += f"Healthy APIs: {health_status['summary']['healthy']}/{health_status['summary']['total_apis']}\n"
+        
+        for api_name, api_status in health_status['apis'].items():
+            status_summary += f"\n{api_name.upper()} API: {api_status['status'].upper()}\n"
+            status_summary += f"  Message: {api_status['message']}\n"
+        
+        logger.info(f"Health check completed: {health_status['status']}")
+        return status_summary
+    
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return f"Health check failed: {str(e)}"
+
+
 if __name__ == "__main__":
     logger.info("Starting Petting Zootopia MCP Server...")
     mcp.run()

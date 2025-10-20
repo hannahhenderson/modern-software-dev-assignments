@@ -11,7 +11,7 @@ import os
 # Add the server directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'server'))
 
-from petting_zootopia import greet, duck, dog, cat, ping
+from petting_zootopia import greet, duck, dog, cat, ping, health_check
 
 async def test_greet():
     """Test the greet function"""
@@ -68,6 +68,17 @@ def test_ping():
         print(f"❌ Ping failed: {e}")
         return False
 
+async def test_health_check():
+    """Test the health check function"""
+    print("\n🏥 Testing health check function...")
+    try:
+        result = await health_check()
+        print(f"✅ Health check result: {result}")
+        return "Overall Status:" in result and "Healthy APIs:" in result
+    except Exception as e:
+        print(f"❌ Health check failed: {e}")
+        return False
+
 async def main():
     """Run all tests"""
     print("🚀 Starting Petting Zootopia MCP Server Tests")
@@ -78,7 +89,8 @@ async def main():
         ("Duck Function", test_duck()),
         ("Dog Function", test_dog()),
         ("Cat Function", test_cat()),
-        ("Ping Function", test_ping())
+        ("Ping Function", test_ping()),
+        ("Health Check", test_health_check())
     ]
     
     results = []
