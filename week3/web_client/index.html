@@ -56,12 +56,14 @@
         }
       
         .landing-image{
-          width:100%; max-width:520px; height:auto;
+          width:100%; max-width:520px; height:350px;
           display:block; margin:24px auto 8px;
           border-radius:14px; box-shadow:var(--shadow);
-          background:var(--muted);
+          background:transparent;
           transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
           cursor: pointer;
+          object-fit: cover;
+          object-position: center;
         }
         
         .landing-image:hover {
@@ -334,11 +336,19 @@
                         
                         // Update hero image to show the animal
                         const heroImage = document.getElementById('hero-image');
+                        heroImage.style.filter = 'none'; // Clear filter first
                         heroImage.src = data.imageUrl;
                         heroImage.alt = `${data.animal} image`;
+                        heroImage.style.objectFit = 'scale-down';
+                        heroImage.style.boxShadow = 'none';
                         
                         // Add a playful success animation
                         heroImage.style.animation = 'celebrate 0.6s ease-out';
+                        
+                        // Apply shadow after a brief delay to avoid transition lag
+                        setTimeout(() => {
+                            heroImage.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))';
+                        }, 100);
                         
                         // Clear processing state
                         isProcessing = false;
@@ -356,8 +366,8 @@
                     // Update loading message with animal-specific message
                     const animalMessages = {
                         'duck': '🦆 Duck is swimming over with your image... 🦆',
-                        'dog': '🐶 Dog is running to deliver your photo... 🐶',
-                        'cat': '🐱 Cat is gracefully bringing your image... 🐱'
+                        'dog': '🐶 Dog is running to fetch your photo... 🐶',
+                        'cat': '🐱 Cat will drop an image at your feet shortly... 🐱'
                     };
                     
                     loadingElement.innerHTML = animalMessages[animalType] || '🖼️ Loading your animal image... 🖼️';
@@ -407,6 +417,9 @@
             const heroImage = document.getElementById('hero-image');
             heroImage.src = 'assets/images/petting_zoo_hero.png';
             heroImage.alt = 'Petting Zoo';
+            heroImage.style.objectFit = 'cover';
+            heroImage.style.boxShadow = 'var(--shadow)';
+            heroImage.style.filter = 'none';
         }
     </script>
 </body>

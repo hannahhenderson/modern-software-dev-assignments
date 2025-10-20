@@ -39,8 +39,8 @@ async def duck() -> str:
 
 @mcp.tool
 async def dog() -> str:
-    """Get a random dog image from the dog.ceo API."""
-    dog_url = "https://dog.ceo/api/breeds/image/random"
+    """Get a random dog image from random.dog API."""
+    dog_url = "https://random.dog/woof.json"
     
     try:
         logger.info(f"Fetching dog from {dog_url}")
@@ -48,9 +48,22 @@ async def dog() -> str:
             response = await client.get(dog_url, timeout=10.0)
             response.raise_for_status()
             data = response.json()
-            url = data.get("message", "No dog URL found")
-            logger.info(f"Successfully fetched dog: {url}")
-            return url
+            
+            # Random.dog returns direct image URLs
+            if data and 'url' in data and data['url']:
+                url = data['url']
+                logger.info(f"Successfully fetched dog: {url}")
+                return url
+            else:
+                logger.warning("No dog image found in API response, trying fallback")
+                # Fallback to original dog.ceo API
+                fallback_url = "https://dog.ceo/api/breeds/image/random"
+                fallback_response = await client.get(fallback_url, timeout=10.0)
+                fallback_response.raise_for_status()
+                fallback_data = fallback_response.json()
+                url = fallback_data.get("message", "No dog URL found")
+                logger.info(f"Successfully fetched dog from fallback: {url}")
+                return url
     except httpx.TimeoutException:
         logger.error("Timeout fetching dog")
         return "Error: Request timed out while fetching dog"
