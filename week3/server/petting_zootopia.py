@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from rate_limiter import wait_for_rate_limit, check_api_rate_limit
 from error_handling import handle_httpx_error, get_user_friendly_message, validate_input, PettingZooError
 from health_check import get_health_status
+from observability import trace_tool
 
 # Configure logging
 logging.basicConfig(
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 mcp = FastMCP("Petting Zootopia MCP Server")
 
 @mcp.tool
+@trace_tool("greet_tool")
 def greet(name: str) -> str:
     """Greet a person by name."""
     try:
@@ -34,6 +36,7 @@ def greet(name: str) -> str:
         return f"Error: {str(e)}"
 
 @mcp.tool
+@trace_tool("duck_tool")
 async def duck() -> str:
     """Get a random duck GIF from the random-d.uk API."""
     try:
@@ -66,6 +69,7 @@ async def duck() -> str:
         return f"Error fetching duck: {str(e)}"
 
 @mcp.tool
+@trace_tool("dog_tool")
 async def dog() -> str:
     """Get a random dog image from random.dog API."""
     try:
@@ -111,6 +115,7 @@ async def dog() -> str:
         return f"Error fetching dog: {str(e)}"
 
 @mcp.tool
+@trace_tool("cat_tool")
 async def cat() -> str:
     """Get a random cat image from the cat.ceo API."""
     try:
@@ -149,6 +154,7 @@ async def cat() -> str:
 
 
 @mcp.tool
+@trace_tool("ping_tool")
 def ping() -> str:
     """Simple ping endpoint to check if the MCP server is running."""
     try:
@@ -160,6 +166,7 @@ def ping() -> str:
 
 
 @mcp.tool
+@trace_tool("health_check_tool")
 async def health_check() -> str:
     """Check the health status of all external APIs."""
     try:
