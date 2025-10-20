@@ -14,8 +14,24 @@ fi
 echo "📦 Installing web server dependencies..."
 pip install -r requirements.txt
 
-# Start the server
-echo "🚀 Starting server on http://localhost:8000"
+# Check if MCP server exists
+if [ ! -f "../server/petting_zootopia.py" ]; then
+    echo "❌ Error: MCP server not found at ../server/petting_zootopia.py"
+    echo "   Make sure you're running this from the web/ directory"
+    exit 1
+fi
+
+# Check if MCP client exists
+if [ ! -f "../client/ai_mcp_client.py" ]; then
+    echo "❌ Error: MCP client not found at ../client/ai_mcp_client.py"
+    echo "   Make sure you're running this from the web/ directory"
+    exit 1
+fi
+
+echo "✅ MCP server and client found"
+echo ""
+echo "🚀 Starting web server on http://localhost:8000"
+echo "   Note: Make sure MCP client and server are running separately"
 echo "   Press Ctrl+C to stop"
 echo ""
 
