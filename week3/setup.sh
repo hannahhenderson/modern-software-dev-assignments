@@ -98,15 +98,19 @@ echo "✅ Setup complete!"
 echo ""
 echo "🎯 What would you like to run?"
 echo ""
-echo "1) 🌐 WEB APP + MCP CLIENT + MCP SERVER (Recommended)"
-echo "   - Starts everything needed for the web interface"
-echo "   - Opens web browser automatically"
+echo "1) 🌐 WEB INTERFACE (Recommended)"
+echo "   - Web interface with MCP client/server integration"
+echo "   - Access at http://localhost:8000"
+echo "   - Demonstrates MCP client/server interaction"
 echo ""
-echo "2) 🤖 MCP CLIENT + MCP SERVER (Command line only)"
-echo "   - Just the AI-powered command line interface"
+echo "2) 🤖 COMMAND LINE INTERFACE"
+echo "   - Interactive MCP client with AI backend"
+echo "   - Type natural language queries"
+echo "   - Direct MCP client/server communication"
 echo ""
 echo "3) 🔧 MCP SERVER ONLY (Development)"
 echo "   - Just the MCP server for testing"
+echo "   - Use with external MCP clients"
 echo ""
 echo "4) 📚 Show me the options again"
 echo ""
@@ -115,29 +119,24 @@ echo ""
 
 case $choice in
     1)
-        echo "🌐 Starting web app with MCP client and server..."
+        echo "🌐 Starting web interface with MCP integration..."
         echo ""
         echo "Starting MCP server in background..."
         python server/petting_zootopia.py &
         MCP_SERVER_PID=$!
-        sleep 2
+        sleep 3
         
-        echo "Starting MCP client in background..."
-        python client/ai_mcp_client.py server/petting_zootopia.py &
-        MCP_CLIENT_PID=$!
-        sleep 2
-        
-        echo "Starting web server..."
+        echo "Starting web server (includes MCP client)..."
         cd web && ./start.sh &
         WEB_PID=$!
         sleep 3
         
-        echo "✅ All services started!"
-        echo "   Web interface: http://localhost:8000"
-        echo "   MCP server PID: $MCP_SERVER_PID"
-        echo "   MCP client PID: $MCP_CLIENT_PID"
-        echo "   Web server PID: $WEB_PID"
+        echo "✅ Web interface ready!"
+        echo "   🌐 Web interface: http://localhost:8000"
+        echo "   🔧 MCP server PID: $MCP_SERVER_PID"
+        echo "   🌐 Web server PID: $WEB_PID"
         echo ""
+        echo "The web interface demonstrates MCP client/server interaction"
         echo "Press Ctrl+C to stop all services"
         
         # Function to cleanup on exit
@@ -145,7 +144,6 @@ case $choice in
             echo ""
             echo "🛑 Stopping all services..."
             kill $MCP_SERVER_PID 2>/dev/null
-            kill $MCP_CLIENT_PID 2>/dev/null
             kill $WEB_PID 2>/dev/null
             echo "✅ All services stopped"
             exit 0
@@ -158,8 +156,15 @@ case $choice in
         wait
         ;;
     2)
-        echo "🤖 Starting MCP client and server..."
-        echo "   Press Ctrl+C to stop"
+        echo "🤖 Starting command line MCP client..."
+        echo ""
+        echo "This will start an interactive MCP client with AI backend"
+        echo "You can type natural language queries like:"
+        echo "  - 'Show me a duck'"
+        echo "  - 'Hello Alice'"
+        echo "  - 'I want a cat picture'"
+        echo ""
+        echo "Press Ctrl+C to stop"
         python client/ai_mcp_client.py server/petting_zootopia.py
         ;;
     3)

@@ -1,32 +1,66 @@
 #!/usr/bin/env python3
 """
-Simple HTTP server for the Petting Zootopia web interface.
-This is a basic web server that serves the HTML interface.
+HTTP server that demonstrates MCP client/server interaction.
+This web interface properly uses the MCP client to communicate with the MCP server.
 """
 
+import asyncio
 import logging
+import os
+import sys
 from pathlib import Path
+
+# Add the parent directory to the path so we can import the MCP client
+sys.path.append(str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 import uvicorn
 
+# Import our MCP client
+from client.ai_mcp_client import create_mcp_client
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Petting Zootopia Web Interface", version="1.0.0")
+app = FastAPI(title="Petting Zootopia MCP Web Interface", version="1.0.0")
+
+# Global variable to store the MCP client
+mcp_client = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Web server startup."""
-    logger.info("Petting Zootopia web server starting...")
-    logger.info("Note: Make sure MCP client and server are running separately")
+    """Initialize the MCP client when the server starts."""
+    global mcp_client
+    try:
+        # Get the server path
+        server_path = Path(__file__).parent.parent / "server" / "petting_zootopia.py"
+        
+        if not server_path.exists():
+            raise FileNotFoundError(f"Server file not found: {server_path}")
+        
+        # Create the MCP client
+        mcp_client = create_mcp_client()
+        
+        # Connect to the server
+        await mcp_client["connect_to_server"](str(server_path))
+        logger.info("Successfully connected to MCP server")
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize MCP client: {e}")
+        raise
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Web server shutdown."""
-    logger.info("Petting Zootopia web server shutting down...")
+    """Clean up when the server shuts down."""
+    global mcp_client
+    if mcp_client:
+        try:
+            await mcp_client["cleanup"]()
+            logger.info("MCP client cleaned up")
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
 
 @app.get("/")
 async def serve_index():
@@ -36,28 +70,39 @@ async def serve_index():
 @app.post("/api/animal")
 async def get_animal(request: dict):
     """
-    Get an animal image - placeholder endpoint.
+    Get an animal image using the MCP client.
+    This demonstrates proper MCP client/server interaction.
     
     Expected request body:
     {
-        "animal": "rabbit|dog|cat",
-        "message": "I want a rabbit!"
+        "animal": "duck|dog|cat",
+        "message": "I want a duck!"
     }
     """
+    global mcp_client
+    
+    if not mcp_client:
+        raise HTTPException(status_code=500, detail="MCP client not initialized")
+    
     try:
         animal_type = request.get("animal", "").lower()
         message = request.get("message", f"I want a {animal_type}!")
         
-        if animal_type not in ["rabbit", "dog", "cat"]:
-            raise HTTPException(status_code=400, detail="Invalid animal type. Must be rabbit, dog, or cat")
+        if animal_type not in ["duck", "dog", "cat"]:
+            raise HTTPException(status_code=400, detail="Invalid animal type. Must be duck, dog, or cat")
         
         logger.info(f"Processing request for {animal_type}: {message}")
         
-        # TODO: This is a placeholder - the web interface needs to be connected
-        # to a running MCP client and server to work properly
+        # Use the MCP client to process the query - this is the proper MCP flow!
+        result = await mcp_client["process_query"](message)
+        
+        if not result or not result.strip():
+            raise HTTPException(status_code=500, detail="No result from MCP client")
+        
+        # The result should be a URL to an image
         return {
-            "success": False,
-            "error": "MCP client and server not connected. Please run setup.sh option 1 to start all services.",
+            "success": True,
+            "imageUrl": result.strip(),
             "animal": animal_type,
             "message": message
         }
@@ -71,7 +116,7 @@ async def get_animal(request: dict):
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "web_server": "running", "mcp_connected": False}
+    return {"status": "healthy", "web_server": "running", "mcp_connected": mcp_client is not None}
 
 if __name__ == "__main__":
     # Change to the web directory

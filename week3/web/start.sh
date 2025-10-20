@@ -31,7 +31,7 @@ fi
 echo "✅ MCP server and client found"
 echo ""
 echo "🚀 Starting web server on http://localhost:8000"
-echo "   Note: Make sure MCP client and server are running separately"
+echo "   Note: This web server includes MCP client integration"
 echo "   Press Ctrl+C to stop"
 echo ""
 

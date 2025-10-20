@@ -50,23 +50,27 @@ ollama pull llama3.2:3b
 python server/petting_zootopia.py
 ```
 
-### 4. Use the Web Interface (Easiest)
-```bash
-# Start the web server
-cd web
-./start.sh
+### 4. Choose Your Interface
 
-# Open your browser to:
-# http://localhost:8000
+#### 🌐 Web Interface (Recommended)
+```bash
+# Start everything with web interface
+./setup.sh
+# Choose option 1, then open http://localhost:8000
 ```
 
-### 5. Use the AI Client (Advanced)
+#### 🤖 Command Line Interface
 ```bash
-# Use with Ollama (free, local)
-python client/ai_mcp_client.py server/petting_zootopia.py
+# Start interactive MCP client
+./setup.sh
+# Choose option 2, then type natural language queries
+```
 
-# Use with Claude (requires API key)
-AI_BACKEND=claude_cheaper python client/ai_mcp_client.py server/petting_zootopia.py
+#### 🔧 Development Mode
+```bash
+# Start just the MCP server
+./setup.sh
+# Choose option 3 for development/testing
 ```
 
 ## 🤖 AI Backend Options
@@ -104,35 +108,33 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 ## 📖 Usage Examples
 
-### Web Interface (Recommended)
+### 🌐 Web Interface
 ```bash
-# Start the web server
-cd web
-./start.sh
-
-# Open http://localhost:8000
-# Click the animal buttons to get images!
+# Start web interface
+./setup.sh
+# Choose option 1, then open http://localhost:8000
+# Click animal buttons to get images via MCP client/server!
 ```
 
-### Direct Tool Calls
+### 🤖 Command Line Interface
+```bash
+# Start interactive MCP client
+./setup.sh
+# Choose option 2, then type queries:
+
+Query: Show me a duck
+Query: Hello Alice  
+Query: I want a cat picture
+Query: Get me a dog
+```
+
+### 🔧 Direct MCP Server Usage
 ```python
-# The server provides these tools:
+# The MCP server provides these tools:
 await greet("Alice")           # Returns: "Hello, Alice!"
 await duck()                   # Returns: "https://random-d.uk/api/gifs/12.gif"
 await dog()                    # Returns: "https://images.dog.ceo/breeds/..."
 await cat()                    # Returns: "https://cdn2.thecatapi.com/images/..."
-```
-
-### AI-Powered Client
-```bash
-# Start the AI client
-python client/ai_mcp_client.py server/petting_zootopia.py
-
-# Then interact naturally:
-Query: Show me a duck
-Query: Hello Alice
-Query: I want a cat picture
-Query: Get me a dog
 ```
 
 ## 🏗️ Architecture
