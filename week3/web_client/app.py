@@ -105,10 +105,26 @@ async def get_animal(request: dict):
         if not result or not result.strip():
             raise HTTPException(status_code=500, detail="No result from MCP client")
         
-        # The result should be a URL to an image
+        # Extract the actual image URL from the MCP response
+        # The MCP client returns a conversation that includes metadata
+        # We need to find the actual URL in the response
+        import re
+        
+        # Look for URLs in the response - improved regex to handle trailing punctuation
+        url_pattern = r'https?://[^\s<>"{}|\\^`\[\],\']+'
+        urls = re.findall(url_pattern, result)
+        
+        if not urls:
+            logger.error(f"No URL found in MCP response: {result}")
+            raise HTTPException(status_code=500, detail="No image URL found in response")
+        
+        # Use the first URL found (should be the image URL)
+        image_url = urls[0]
+        logger.info(f"Extracted image URL: {image_url}")
+        
         return {
             "success": True,
-            "imageUrl": result.strip(),
+            "imageUrl": image_url,
             "animal": animal_type,
             "message": message
         }

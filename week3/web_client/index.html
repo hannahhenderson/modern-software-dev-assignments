@@ -5,163 +5,127 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Petting Zootopia</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root{
+          --paper:#FFF6EC;
+          --ink:#3A2E2A;
+          --orange:#F4A259;
+          --orange-deep:#E07A35;
+          --brown:#8B5E3C;
+          --yellow:#F4C23A;
+          --sage:#A9C48C;
+          --sky:#CFE7F5;
+          --error:#C0392B;
+          --ring:#2D9CDB;
+          --card:#FFFFFF;
+          --muted:#F4EFE8;
+          --shadow:0 10px 24px rgba(0,0,0,.08);
+          --radius:16px;
         }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
+      
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+          font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+          color:var(--ink);
+          background:
+            radial-gradient(1200px 600px at 70% -10%, var(--sky), transparent 60%),
+            radial-gradient(900px 500px at 10% 0%, var(--sage), transparent 50%),
+            var(--paper);
+          display:flex; align-items:center; justify-content:center;
+          padding:32px;
         }
-
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            padding: 40px;
-            max-width: 600px;
-            width: 100%;
-            text-align: center;
+      
+        .container{
+          width:100%; max-width:720px;
+          background:var(--card);
+          border-radius:var(--radius);
+          box-shadow:var(--shadow);
+          padding:40px 40px 32px;
         }
-
-        h1 {
-            color: #333;
-            font-size: 2.5em;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #ff6b6b, #ff9ff3, #54a0ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+      
+        header{
+          display:flex; align-items:center; gap:16px; justify-content:center; margin-bottom:16px;
         }
-
-        .landing-image {
-            width: 100%;
-            max-width: 400px;
-            height: 250px;
-            object-fit: cover;
-            border-radius: 15px;
-            margin: 20px 0;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        h1{
+          font-size:clamp(24px, 4vw, 34px);
+          font-weight:800; letter-spacing:.2px;
+          color:var(--ink);
         }
-
-        .buttons-container {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 30px;
+        .tagline{
+          color:#6B5F59; margin-top:4px; text-align:center;
         }
-
-        .animal-button {
-            background: linear-gradient(45deg, #ff6b6b, #ff9ff3);
-            color: white;
-            border: none;
-            padding: 15px 25px;
-            border-radius: 50px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            min-width: 120px;
+      
+        .landing-image{
+          width:100%; max-width:520px; height:auto;
+          display:block; margin:24px auto 8px;
+          border-radius:14px; box-shadow:var(--shadow);
+          background:var(--muted);
         }
-
-        .animal-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      
+        .buttons-container{
+          display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-top:20px;
         }
-
-        .animal-button:active {
-            transform: translateY(-1px);
+      
+        .animal-button{
+          --bg:var(--orange);
+          --bg-hover:var(--orange-deep);
+          background:var(--bg); color:#fff;
+          border:1px solid rgba(0,0,0,.05);
+          padding:12px 18px; border-radius:999px;
+          font-weight:700; font-size:16px;
+          cursor:pointer; transition:transform .08s ease, box-shadow .2s ease, background .2s ease;
+          box-shadow:0 2px 0 rgba(0,0,0,.12);
         }
-
-        .animal-button.duck {
-            background: linear-gradient(45deg, #ff9ff3, #f368e0);
+        .animal-button:hover{background:var(--bg-hover)}
+        .animal-button:active{transform:translateY(1px)}
+        .animal-button:focus-visible{
+          outline:3px solid var(--ring); outline-offset:2px;
         }
-
-        .animal-button.dog {
-            background: linear-gradient(45deg, #54a0ff, #2e86de);
+        .animal-button.duck{ --bg:var(--yellow); --bg-hover:#E2B12F; color:#3b2a22 }
+        .animal-button.dog{ --bg:var(--brown); --bg-hover:#754A32 }
+        .animal-button.cat{ --bg:var(--orange); --bg-hover:var(--orange-deep) }
+      
+        .result-container{
+          margin-top:24px; padding:20px;
+          background:var(--muted); border-radius:12px; display:none;
         }
-
-        .animal-button.cat {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        .result-container h3{ margin-bottom:12px }
+        .result-image{
+          max-width:100%; max-height:360px; border-radius:12px; box-shadow:var(--shadow);
+          background:#fff;
         }
-
-        .result-container {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 15px;
-            display: none;
+      
+        .loading{
+          display:none; margin:18px 0; text-align:center;
         }
-
-        .result-image {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      
+        .progress{
+          width:100%; max-width:360px; height:8px; background:#E9E1D9;
+          margin:10px auto 0; border-radius:999px; overflow:hidden;
         }
-
-        .loading {
-            display: none;
-            color: #667eea;
-            font-size: 1.2em;
-            margin: 20px 0;
+        .bar{height:100%; width:0%; background:var(--sage)}
+      
+        .error{
+          display:none; margin:18px 0; padding:12px 14px;
+          background:#FDEDEC; color:var(--error); border:1px solid #F5B7B1; border-radius:10px;
         }
-
-        .error {
-            color: #e74c3c;
-            background: #ffe6e6;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            display: none;
-        }
-
-        .sad-animal {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 10px;
-            margin: 10px 0;
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                padding: 20px;
-            }
-            
-            h1 {
-                font-size: 2em;
-            }
-            
-            .buttons-container {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .animal-button {
-                width: 100%;
-                max-width: 200px;
-            }
-        }
-    </style>
+      
+        footer{margin-top:18px; text-align:center; font-size:12px; color:#7B6F68}
+        @media (max-width:640px){ .container{padding:24px} }
+      </style>
+      
 </head>
 <body>
     <div class="container">
         <h1>🐾 Welcome to Petting Zootopia! 🐾</h1>
         
-        <img src="assets/images/petting_zoo_hero.png" 
+        <img id="hero-image" 
+             src="assets/images/petting_zoo_hero.png" 
              alt="Petting Zoo" 
-             class="landing-image"
+             class="landing-image" 
              onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjBGMEYwIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTI1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5QZXR0aW5nIFpvb3RvcGlhPC90ZXh0Pgo8L3N2Zz4K'">
-        
+             <p class="tagline">Browse a friendly menagerie — cat, duck, and dog.</p>
+
         <div class="buttons-container">
             <button class="animal-button duck" onclick="requestAnimal('duck')">
                 🦆 Duck
@@ -172,11 +136,15 @@
             <button class="animal-button cat" onclick="requestAnimal('cat')">
                 🐱 Cat
             </button>
+            <button class="animal-button" onclick="resetHeroImage()" style="--bg: var(--sage); --bg-hover: #8FAF6B;">
+                🏠 Reset
+            </button>
         </div>
 
         <div class="loading" id="loading">
             🐾 Finding your perfect animal... 🐾
         </div>
+        <div class="progress" id="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
 
         <div class="error" id="error">
             Oops! Something went wrong. Please try again.
@@ -189,7 +157,21 @@
     </div>
 
     <script>
+        // Global state management
+        let isProcessing = false;
+        let currentRequest = null;
+        
         async function requestAnimal(animalType) {
+            // Prevent multiple simultaneous requests
+            if (isProcessing) {
+                console.log('Request already in progress, ignoring...');
+                return;
+            }
+            
+            // Set processing state
+            isProcessing = true;
+            currentRequest = animalType;
+            
             // Hide previous results and errors
             document.getElementById('result').style.display = 'none';
             document.getElementById('error').style.display = 'none';
@@ -198,6 +180,16 @@
             const loadingElement = document.getElementById('loading');
             loadingElement.style.display = 'block';
             loadingElement.innerHTML = '🐾 Finding your perfect animal... 🐾';
+            
+            // Store original hero image for potential restoration
+            const heroImage = document.getElementById('hero-image');
+            const originalHeroSrc = heroImage.src;
+            
+            // Reset hero image to original if it was showing a sad animal
+            if (heroImage.src.includes('sad_')) {
+                heroImage.src = 'assets/images/petting_zoo_hero.png';
+                heroImage.alt = 'Petting Zoo';
+            }
             
             try {
                 // Send request to our backend
@@ -219,6 +211,17 @@
                 const data = await response.json();
                 
                 if (data.success && data.imageUrl) {
+                    console.log('API response received:', data);
+                    console.log('Current request:', currentRequest, 'Animal type:', animalType);
+                    
+                    // Check if this is still the current request
+                    if (currentRequest !== animalType) {
+                        console.log('Request outdated, ignoring result');
+                        return;
+                    }
+                    
+                    console.log('Processing successful response for:', animalType);
+                    
                     // Show the result
                     const resultImage = document.getElementById('result-image');
                     resultImage.alt = `${data.animal} image`;
@@ -226,29 +229,56 @@
                     // Set up timeout for image loading (10 seconds)
                     const imageTimeout = setTimeout(() => {
                         console.warn('Image loading timeout:', data.imageUrl);
-                        document.getElementById('loading').style.display = 'none';
-                        showSadAnimal(animalType);
+                        if (currentRequest === animalType) {
+                            document.getElementById('loading').style.display = 'none';
+                            showSadAnimal(animalType);
+                        }
                     }, 10000);
                     
                     // Set up image loading handlers
                     resultImage.onload = function() {
+                        console.log('Image loaded successfully:', data.imageUrl);
+                        console.log('Current request:', currentRequest, 'Animal type:', animalType);
+                        
+                        // Check if this is still the current request
+                        if (currentRequest !== animalType) {
+                            console.log('Request outdated, ignoring image load');
+                            return;
+                        }
+                        
+                        console.log('Updating hero image with:', data.imageUrl);
+                        
                         // Image loaded successfully - clear timeout and show result
                         clearTimeout(imageTimeout);
                         document.getElementById('loading').style.display = 'none';
                         document.getElementById('result').style.display = 'block';
+                        
+                        // Update hero image to show the animal
+                        const heroImage = document.getElementById('hero-image');
+                        heroImage.src = data.imageUrl;
+                        heroImage.alt = `${data.animal} image`;
+                        
+                        console.log('Hero image updated successfully');
+                        
+                        // Clear processing state
+                        isProcessing = false;
+                        currentRequest = null;
                     };
                     
                     resultImage.onerror = function() {
                         console.error('Failed to load image:', data.imageUrl);
                         clearTimeout(imageTimeout);
-                        document.getElementById('loading').style.display = 'none';
-                        showSadAnimal(animalType);
+                        if (currentRequest === animalType) {
+                            document.getElementById('loading').style.display = 'none';
+                            showSadAnimal(animalType);
+                        }
                     };
                     
                     // Update loading message
                     loadingElement.innerHTML = '🖼️ Loading your animal image... 🖼️';
                     
                     // Start loading the image
+                    console.log('Starting to load image:', data.imageUrl);
                     resultImage.src = data.imageUrl;
                 } else {
                     throw new Error(data.error || 'No image received');
@@ -256,9 +286,11 @@
                 
             } catch (error) {
                 console.error('Error:', error);
-                // Hide loading and show error
-                document.getElementById('loading').style.display = 'none';
-                showSadAnimal(animalType);
+                // Only show error if this is still the current request
+                if (currentRequest === animalType) {
+                    document.getElementById('loading').style.display = 'none';
+                    showSadAnimal(animalType);
+                }
             }
         }
 
@@ -271,7 +303,12 @@
             
             const sadImageUrl = sadImages[animalType] || sadImages['cat'];
             
-            // Show sad animal image
+            // Update hero image to show sad animal
+            const heroImage = document.getElementById('hero-image');
+            heroImage.src = sadImageUrl;
+            heroImage.alt = `Sad ${animalType}`;
+            
+            // Show sad animal image in result container too
             const resultImage = document.getElementById('result-image');
             resultImage.src = sadImageUrl;
             resultImage.alt = `Sad ${animalType}`;
@@ -279,10 +316,20 @@
             
             // Show error message
             document.getElementById('error').style.display = 'block';
-            document.getElementById('error').innerHTML = `
-                <strong>Sorry, we couldn't find a ${animalType} right now! 😢</strong><br>
-                Here's a sad ${animalType} instead. Please try again later.
-            `;
+            document.getElementById('error').innerHTML = 
+                `<strong>Sorry, we couldn't find a ${animalType} right now! 😢</strong><br>
+                 Here's a sad ${animalType} instead. Please try again later.`;
+            
+            // Clear processing state
+            isProcessing = false;
+            currentRequest = null;
+        }
+        
+        // Function to reset hero image to original
+        function resetHeroImage() {
+            const heroImage = document.getElementById('hero-image');
+            heroImage.src = 'assets/images/petting_zoo_hero.png';
+            heroImage.alt = 'Petting Zoo';
         }
     </script>
 </body>
