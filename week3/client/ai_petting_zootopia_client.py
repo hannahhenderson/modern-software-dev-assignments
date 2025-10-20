@@ -15,8 +15,6 @@ class AIPettingZootopiaClient:
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
         self.anthropic = Anthropic()
-        # Cache tool schemas to avoid repeated API calls
-        self.cached_tools = None
 
     async def connect_to_server(self, server_script_path: str):
         """Connect to an MCP server
@@ -56,18 +54,14 @@ class AIPettingZootopiaClient:
             }
         ]
 
-        # Use cached tools if available, otherwise fetch them
-        if self.cached_tools is None:
-            response = await self.session.list_tools()
-            self.cached_tools = [{ 
-                "name": tool.name,
-                "description": tool.description,
-                "input_schema": tool.inputSchema
-            } for tool in response.tools]
-        
-        available_tools = self.cached_tools
+        response = await self.session.list_tools()
+        available_tools = [{ 
+            "name": tool.name,
+            "description": tool.description,
+            "input_schema": tool.inputSchema
+        } for tool in response.tools]
 
-        # Initial Claude API call - using cheaper model for learning
+        # Initial Claude API call
         response = self.anthropic.messages.create(
             model="claude-haiku-20240307",  # Much cheaper: $0.25/$1.25 per 1M tokens
             max_tokens=300,  # Reduced from 1000 to save costs
