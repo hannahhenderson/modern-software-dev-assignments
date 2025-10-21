@@ -261,7 +261,7 @@
              src="assets/images/petting_zoo_hero.png" 
              alt="Petting Zoo" 
              class="landing-image" 
-             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjBGMEYwIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTI1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5QZXR0aW5nIFpvb3RvcGlhPC90ZXh0Pgo8L3N2Zz4K'">
+             onerror="handleImageError(this)">
              <p class="tagline">Browse a friendly menagerie — cat, duck, and dog.</p>
 
         <div class="error" id="error">
@@ -298,8 +298,69 @@
         let isProcessing = false;
         let currentRequest = null;
         
+        function handleImageError(img) {
+            // If we're currently processing a request, show the appropriate sad animal
+            if (isProcessing && currentRequest) {
+                const query = currentRequest.toLowerCase();
+                if (query.includes('dog')) {
+                    img.src = 'assets/images/sad_dog.jpg';
+                    img.alt = 'Sad dog - image failed to load';
+                    img.style.objectFit = 'cover';
+                    img.style.boxShadow = 'var(--shadow)';
+                    img.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))';
+                    
+                    // Show dog-specific error message
+                    const errorElement = document.getElementById('error');
+                    errorElement.innerHTML = `🐶 I'm sorry, our dog fix provider is experiencing some issues. Try asking again<br><small>I can show you ducks, dogs, or cats at the petting zoo!</small>`;
+                    errorElement.style.display = 'block';
+                } else if (query.includes('cat')) {
+                    img.src = 'assets/images/sad_cat.jpg';
+                    img.alt = 'Sad cat - image failed to load';
+                    img.style.objectFit = 'cover';
+                    img.style.boxShadow = 'var(--shadow)';
+                    img.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))';
+                    
+                    // Show cat-specific error message
+                    const errorElement = document.getElementById('error');
+                    errorElement.innerHTML = `😿 I'm sorry, our cat fix provider is experiencing some issues. Try asking again<br><small>I can show you ducks, dogs, or cats at the petting zoo!</small>`;
+                    errorElement.style.display = 'block';
+                } else if (query.includes('duck')) {
+                    img.src = 'assets/images/sad_duck.jpg';
+                    img.alt = 'Sad duck - image failed to load';
+                    img.style.objectFit = 'cover';
+                    img.style.boxShadow = 'var(--shadow)';
+                    img.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))';
+                    
+                    // Show duck-specific error message
+                    const errorElement = document.getElementById('error');
+                    errorElement.innerHTML = `🐥 I'm sorry, our duck fix provider is experiencing some issues. Try asking again<br><small>I can show you ducks, dogs, or cats at the petting zoo!</small>`;
+                    errorElement.style.display = 'block';
+                } else {
+                    // Default to sad dog for unknown requests
+                    img.src = 'assets/images/sad_dog.jpg';
+                    img.alt = 'Sad dog - image failed to load';
+                    img.style.objectFit = 'cover';
+                    img.style.boxShadow = 'var(--shadow)';
+                    img.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))';
+                    
+                    // Show generic error message
+                    showError('Sorry, that image failed to load. Please try again!');
+                }
+                
+                // Clear processing state
+                isProcessing = false;
+                currentRequest = null;
+            } else {
+                // Fallback to original hero image
+                img.src = 'assets/images/petting_zoo_hero.png';
+                img.alt = 'Petting Zoo';
+            }
+        }
+        
         function setInput(text) {
             document.getElementById('animalInput').value = text;
+            // Automatically submit the request
+            submitRequest();
         }
         
         function handleKeyPress(event) {
@@ -633,6 +694,12 @@
             heroImage.style.objectFit = 'cover';
             heroImage.style.boxShadow = 'var(--shadow)';
             heroImage.style.filter = 'none';
+            
+            // Clear the input field
+            document.getElementById('animalInput').value = '';
+            
+            // Hide any error messages
+            document.getElementById('error').style.display = 'none';
         }
     </script>
 </body>

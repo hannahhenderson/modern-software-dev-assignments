@@ -86,25 +86,43 @@ async def dog() -> str:
         logger.info(f"Fetching dog from {dog_url}")
         
         async with httpx.AsyncClient() as client:
-            response = await client.get(dog_url, timeout=10.0)
-            response.raise_for_status()
-            data = response.json()
+            # Try random.dog first
+            try:
+                response = await client.get(dog_url, timeout=10.0)
+                response.raise_for_status()
+                data = response.json()
+                
+                if data and 'url' in data and data['url']:
+                    url = data['url']
+                    # Validate that it's actually an image URL
+                    if url.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                        logger.info(f"Successfully fetched dog: {url}")
+                        return url
+                    else:
+                        logger.warning(f"Random.dog returned non-image URL: {url}, trying fallback")
+                else:
+                    logger.warning("No dog image found in random.dog response, trying fallback")
+            except Exception as e:
+                logger.warning(f"Random.dog failed: {e}, trying fallback")
             
-            # Random.dog returns direct image URLs
-            if data and 'url' in data and data['url']:
-                url = data['url']
-                logger.info(f"Successfully fetched dog: {url}")
-                return url
-            else:
-                logger.warning("No dog image found in API response, trying fallback")
-                # Fallback to original dog.ceo API
+            # Fallback to dog.ceo API
+            try:
                 fallback_url = "https://dog.ceo/api/breeds/image/random"
                 fallback_response = await client.get(fallback_url, timeout=10.0)
                 fallback_response.raise_for_status()
                 fallback_data = fallback_response.json()
-                url = fallback_data.get("message", "No dog URL found")
-                logger.info(f"Successfully fetched dog from fallback: {url}")
-                return url
+                url = fallback_data.get("message", "")
+                if url and url.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                    logger.info(f"Successfully fetched dog from fallback: {url}")
+                    return url
+                else:
+                    logger.warning(f"Dog.ceo returned invalid URL: {url}")
+            except Exception as e:
+                logger.warning(f"Dog.ceo fallback failed: {e}")
+            
+            # Final fallback - return a known good dog image
+            logger.warning("All dog APIs failed, using fallback image")
+            return "https://images.dog.ceo/breeds/retriever-golden/n02099601_1004.jpg"
     
     except httpx.HTTPError as e:
         error = handle_httpx_error(e, "dog")
