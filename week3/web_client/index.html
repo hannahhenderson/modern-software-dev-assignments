@@ -44,7 +44,7 @@
         }
       
         header{
-          display:flex; align-items:center; gap:16px; justify-content:center; margin-bottom:16px;
+          display:flex; align-items:center; gap:16px; justify-content:flex-start; margin-bottom:16px;
         }
         h1{
           font-size:clamp(24px, 4vw, 34px);
@@ -52,18 +52,15 @@
           color:var(--ink);
         }
         .tagline{
-          color:#6B5F59; margin-top:4px; text-align:center;
+          color:#6B5F59; margin-top:4px; text-align:left;
         }
         .sub-header{
-          text-align:center;
+          text-align:left;
           font-size:14px;
           color:var(--brown);
           font-style:italic;
           margin:16px 0 24px;
           opacity:0.8;
-          max-width: 500px;
-          margin-left: auto;
-          margin-right: auto;
           line-height: 1.4;
         }
       
@@ -89,7 +86,7 @@
         }
       
         .buttons-container{
-          display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:20px;
+          display:flex; flex-direction:column; align-items:flex-start; gap:16px; margin-top:20px;
         }
         .input-group{
           display:flex; gap:8px; max-width:600px; width:100%;
@@ -111,7 +108,7 @@
           transform:translateY(-2px); box-shadow:0 6px 20px rgba(244,162,89,0.4);
         }
         .quick-buttons{
-          display:flex; gap:8px; justify-content:center; flex-wrap:wrap;
+          display:flex; gap:8px; justify-content:flex-start; flex-wrap:wrap;
         }
         .quick-button{
           padding:8px 16px; border:2px solid var(--muted); border-radius:8px; font-size:14px;
@@ -267,12 +264,16 @@
              onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjUwIiBmaWxsPSIjRjBGMEYwIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTI1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5QZXR0aW5nIFpvb3RvcGlhPC90ZXh0Pgo8L3N2Zz4K'">
              <p class="tagline">Browse a friendly menagerie — cat, duck, and dog.</p>
 
+        <div class="error" id="error">
+            Oops! Something went wrong. Please try again.
+        </div>
+
         <div class="buttons-container">
             <div class="input-group">
-                <input type="text" id="animalInput" placeholder="Ask for any animal! (e.g., 'I want a duck', 'show me a cat', 'get me a dog')" 
+                <input type="text" id="animalInput" placeholder="What do you want to see at the petting zoo today? (e.g., 'I want a duck', 'show me a cat', 'get me a dog')" 
                        class="animal-input" onkeypress="handleKeyPress(event)">
                 <button class="submit-button" onclick="submitRequest()">
-                    🐾 Get Animal
+                    🐾 Explore
                 </button>
             </div>
             <div class="quick-buttons">
@@ -285,10 +286,6 @@
 
         <div class="loading" id="loading">
             🐾 Finding your perfect animal... 🐾
-        </div>
-
-        <div class="error" id="error">
-            Oops! Something went wrong. Please try again.
         </div>
 
         <footer>
@@ -307,6 +304,7 @@
         
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent form submission
                 submitRequest();
             }
         }
@@ -316,7 +314,7 @@
             const query = input.value.trim();
             
             if (!query) {
-                showError('Please enter what animal you want!');
+                showError('Please tell me what you\'d like to see at the petting zoo!');
                 return;
             }
             
@@ -379,7 +377,7 @@
                 if (data.success) {
                     showSuccess(data.imageUrl, data.animal || 'animal');
                 } else if (data.noTools) {
-                    showNoTools(data.message || 'Sorry, I don\'t have tools for that request!');
+                    showNoTools(data.message || 'I\'m sorry, I don\'t know what animal to show for that request. I only know about dogs and ducks and cats.');
                 } else {
                     showError(data.error || 'Failed to fetch animal');
                 }
@@ -573,14 +571,29 @@
             // Hide loading
             document.getElementById('loading').style.display = 'none';
             
-            const errorElement = document.getElementById('error');
-            errorElement.innerHTML = `🤷‍♀️ ${message}<br><small>Try asking for a duck, dog, or cat!</small>`;
-            errorElement.style.display = 'block';
+            // Show random sad animal
+            const sadImages = [
+                { image: 'assets/images/sad_cat.jpg', emoji: '😿' },
+                { image: 'assets/images/sad_dog.jpg', emoji: '🐶' },
+                { image: 'assets/images/sad_duck.jpg', emoji: '🐥' }
+            ];
             
-            // Show a confused animal or keep the original hero image
+            const randomSadAnimal = sadImages[Math.floor(Math.random() * sadImages.length)];
             const heroImage = document.getElementById('hero-image');
-            heroImage.src = 'assets/images/petting_zoo_hero.png';
-            heroImage.alt = 'Petting Zoo - Try asking for duck, dog, or cat';
+            heroImage.src = randomSadAnimal.image;
+            heroImage.alt = 'Sad animal - not available at petting zoo';
+            heroImage.style.objectFit = 'cover';
+            heroImage.style.boxShadow = 'var(--shadow)';
+            heroImage.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))';
+            
+            // Show error message with matching emoji
+            const errorElement = document.getElementById('error');
+            // Check if message already has an emoji, if not add the random animal emoji
+            const messageWithEmoji = message.startsWith('😿') || message.startsWith('🐶') || message.startsWith('🐥') 
+                ? message 
+                : `${randomSadAnimal.emoji} ${message}`;
+            errorElement.innerHTML = `${messageWithEmoji}<br><small>I can show you ducks, dogs, or cats at the petting zoo!</small>`;
+            errorElement.style.display = 'block';
             
             // Clear processing state
             isProcessing = false;

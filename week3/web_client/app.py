@@ -112,7 +112,6 @@ async def get_animal(request: dict):
             return {
                 "success": False,
                 "noTools": True,
-                "message": "Sorry, I don't have tools for that request! Try asking for a duck, dog, or cat.",
                 "query": query
             }
         
