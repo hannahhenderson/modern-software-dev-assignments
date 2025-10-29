@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Petting Zootopia</title>
+    <style>
+        :root{
+          --paper:#FFF6EC;
+          --ink:#3A2E2A;
+          --orange:#F4A259;
+          --orange-deep:#E07A35;
+          --brown:#8B5E3C;
+          --yellow:#F4C23A;
+          --sage:#A9C48C;
+          --sky:#CFE7F5;
+          --error:#C0392B;
+          --ring:#2D9CDB;
+          --card:#FFFFFF;
+          --muted:#F4EFE8;
+          --shadow:0 10px 24px rgba(0,0,0,.08);
+          --radius:16px;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+          font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+          color:var(--ink);
+          background:
+            radial-gradient(1200px 600px at 70% -10%, var(--sky), transparent 60%),
+            radial-gradient(900px 500px at 10% 0%, var(--sage), transparent 50%),
+            var(--paper);
+          display:flex; align-items:center; justify-content:center;
+          padding:32px;
+        }
+        .container{
+          width:100%; max-width:960px;
+          background:var(--card);
+          border-radius:var(--radius);
+          box-shadow:var(--shadow);
+          padding:40px;
+        }
+        h1{
+          font-size:clamp(24px, 4vw, 34px);
+          font-weight:800; letter-spacing:.2px;
+          color:var(--ink);
+          margin:0 0 8px 0;
+          text-align:left;
+        }
+        .subtitle{
+          margin:0 0 20px 0;
+          color:var(--brown);
+          text-align:left;
+        }
+        .hero{
+          display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;
+        }
+        .hero img{
+          width:100%; max-width:480px; height:360px; object-fit:cover;
+          border-radius:12px; box-shadow:var(--shadow);
+        }
+        .copy{flex:1; min-width:260px}
+        .section{margin-top:24px}
+        .section h2{color:var(--brown); margin:0 0 8px 0; font-size:18px}
+        .section p{margin:0 0 12px 0; line-height:1.6}
+        a{color:var(--orange); text-decoration:none; font-weight:600}
+        a:hover{color:var(--orange-deep); text-decoration:underline}
+        .back{margin-top:24px}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>About Petting Zootopia</h1>
+        <p class="subtitle">Technically an MCP Server</p>
+        <div class="hero">
+            <img src="https://pbs.twimg.com/media/GY8QZQhWkAAYhJZ?format=jpg&name=large" alt="Michael Zalimeni" onerror="this.style.display='none'">
+            <div class="copy">
+                <div class="section">
+                    <h2>About this project (MCP Server POC)</h2>
+                    <p>This project demonstrates the <strong>Model Context Protocol (MCP)</strong>: a client discovers and invokes server tools dynamically. The web UI sends natural language to an MCP client, which selects tools like <code>duck</code>, <code>dog</code>, <code>cat</code>, <code>greet</code>, <code>ping</code>, and <code>health_check</code> on the server, then returns results.</p>
+                    <p>Built for <a href="https://themodernsoftware.dev/" target="_blank">The Modern Software Developer</a> — Week 3 assignment: <a href="https://github.com/mihail911/modern-software-dev-assignments/blob/master/week3/assignment.md" target="_blank">MCP Server + Client</a>.</p>
+                </div>
+                <div class="section back">
+                    <a href="index.html">🏠 Return to Petting Zootopia</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -80,7 +80,7 @@ Examples:
                 result = await session.call_tool(tool_name, tool_params)
                 return f"Tool '{tool_name}' called with parameters {tool_params}.\nResult: {result.content}"
             else:
-                return "I'm sorry, I don't have a tool that matches your request."
+                return "I'm sorry, I don't have a tool for that request."
                 
         except json.JSONDecodeError:
             return f"Could not parse Ollama response as JSON: {ollama_response}"

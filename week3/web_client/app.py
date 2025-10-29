@@ -32,6 +32,12 @@ app = FastAPI(title="Petting Zootopia MCP Web Interface", version="1.0.0")
 # Mount static files
 app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
+# Serve about page
+@app.get("/about.html")
+async def about_page():
+    """Serve the about page"""
+    return FileResponse("about.html")
+
 # Global variable to store the MCP client
 mcp_client = None
 
@@ -112,6 +118,7 @@ async def get_animal(request: dict):
             return {
                 "success": False,
                 "noTools": True,
+                "message": "I'm sorry, I don't have a tool for that request.",
                 "query": query
             }
         
