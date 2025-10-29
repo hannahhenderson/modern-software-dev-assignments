@@ -8,8 +8,7 @@ A Model Context Protocol (MCP) server that provides animal image tools with AI-p
 
 | Tool | Description | Parameters | Returns | Example |
 |------|-------------|------------|---------|---------|
-| `greet` | Greet someone by name | `name: str` | Greeting message | `greet("Alice")` → `"Hello, Alice!"` |
-| `duck` | Get a random duck GIF | None | Duck image URL | `duck()` → `"https://random-d.uk/api/v2/random.gif"` |
+| `duck` | Get a random duck image | None | Duck image URL | `duck()` → `"https://random-d.uk/api/v2/random.gif"` |
 | `dog` | Get a random dog image | None | Dog image URL | `dog()` → `"https://random.dog/abc123.jpg"` |
 | `cat` | Get a random cat image | None | Cat image URL | `cat()` → `"https://cdn2.thecatapi.com/images/..."` |
 | `ping` | Check if MCP server is running | None | Server status | `ping()` → `"pong"` |
@@ -17,50 +16,53 @@ A Model Context Protocol (MCP) server that provides animal image tools with AI-p
 
 ### Tool Details
 
-#### `greet(name: str) -> str`
-- **Purpose**: Simple greeting function for testing
-- **Parameters**: 
-  - `name` (string): The person's name to greet
-- **Returns**: Greeting message string
-- **Example Usage**: `greet("Alice")` → `"Hello, Alice!"`
-
 #### `duck() -> str`
-- **Purpose**: Fetch a random duck GIF from random-d.uk API
+- **Purpose**: Fetch a random duck image from random-d.uk API
 - **Parameters**: None
-- **Returns**: URL to a random duck GIF
+- **Returns**: URL to a random duck image (GIF, JPG, or PNG)
 - **API**: https://random-d.uk/api/v2/random
 - **Rate Limits**: None
+- **Error Handling**: Returns fallback message if API fails
 - **Example Usage**: `duck()` → `"https://random-d.uk/api/v2/random.gif"`
 
 #### `dog() -> str`
-- **Purpose**: Fetch a random dog image from dog.ceo API
+- **Purpose**: Fetch a random dog image with robust fallback system
 - **Parameters**: None
 - **Returns**: URL to a random dog image
-- **API**: https://dog.ceo/api/breeds/image/random
-- **Rate Limits**: 1000 requests/hour
-- **Example Usage**: `dog()` → `"https://images.dog.ceo/breeds/pointer-german/n02100236_5350.jpg"`
+- **Primary API**: https://random.dog/woof.json
+- **Fallback APIs**: 
+  - https://dog.ceo/api/breeds/image/random (if random.dog fails)
+  - Known good image URL (if all APIs fail)
+- **Rate Limits**: Implements exponential backoff
+- **Error Handling**: Multi-tier fallback system with URL validation
+- **Example Usage**: `dog()` → `"https://random.dog/abc123.jpg"`
 
 #### `cat() -> str`
 - **Purpose**: Fetch a random cat image from The Cat API
 - **Parameters**: None
 - **Returns**: URL to a random cat image
 - **API**: https://api.thecatapi.com/v1/images/search
-- **Rate Limits**: 10 requests/minute
+- **Rate Limits**: Implements exponential backoff
+- **Error Handling**: Returns fallback message if API fails
 - **Example Usage**: `cat()` → `"https://cdn2.thecatapi.com/images/cov.jpg"`
 
 #### `ping() -> str`
-- **Purpose**: Simple ping endpoint to check if the MCP server is running
+- **Purpose**: Simple connectivity test for the MCP server
 - **Parameters**: None
-- **Returns**: Server status confirmation
+- **Returns**: "pong" if server is running
+- **Use Case**: Quick server availability check
 - **Features**: Lightweight server health check, no external API calls
 - **Example Usage**: `ping()` → `"pong"`
 
 #### `health_check() -> str`
-- **Purpose**: Check the health status of all external APIs
+- **Purpose**: Monitor health status of all external APIs
 - **Parameters**: None
-- **Returns**: Comprehensive health report
+- **Returns**: Detailed health report with status, response times, and error details
+- **APIs Monitored**: duck, dog, cat APIs
+- **Status Levels**: HEALTHY, DEGRADED, UNHEALTHY
+- **Use Case**: Debugging API issues and monitoring external dependencies
 - **Features**: Tests all APIs, reports status, provides diagnostics
-- **Example Usage**: `health_check()` → `"Overall Status: HEALTHY\nHealthy APIs: 3/3\n..."`
+- **Example Usage**: `health_check()` → `"Overall Status: HEALTHY\nHealthy APIs: 3/3\nDUCK API: HEALTHY\n..."`
 
 ### Error Handling
 

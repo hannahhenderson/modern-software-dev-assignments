@@ -22,20 +22,6 @@ logger = logging.getLogger(__name__)
 mcp = FastMCP("Petting Zootopia MCP Server")
 
 @mcp.tool
-@trace_tool("greet_tool")
-def greet(name: str) -> str:
-    """Greet a person by name."""
-    try:
-        validate_input(name)
-        return f"Hello, {name}!"
-    except PettingZooError as e:
-        logger.error(f"Validation error in greet: {e.message}")
-        return f"Error: {e.message}"
-    except Exception as e:
-        logger.error(f"Unexpected error in greet: {str(e)}")
-        return f"Error: {str(e)}"
-
-@mcp.tool
 @trace_tool("duck_tool")
 async def duck() -> str:
     """Get a random duck GIF from the random-d.uk API."""

@@ -71,17 +71,27 @@
 <body>
     <div class="container">
         <h1>About Petting Zootopia</h1>
-        <p class="subtitle">Technically an MCP Server</p>
+        <p class="subtitle">Which exposes the Petting Zootopia MCP Server... which is <em>technically</em> an MCP Server</p>
         <div class="hero">
-            <img src="https://pbs.twimg.com/media/GY8QZQhWkAAYhJZ?format=jpg&name=large" alt="Michael Zalimeni" onerror="this.style.display='none'">
             <div class="copy">
                 <div class="section">
                     <h2>About this project (MCP Server POC)</h2>
-                    <p>This project demonstrates the <strong>Model Context Protocol (MCP)</strong>: a client discovers and invokes server tools dynamically. The web UI sends natural language to an MCP client, which selects tools like <code>duck</code>, <code>dog</code>, <code>cat</code>, <code>greet</code>, <code>ping</code>, and <code>health_check</code> on the server, then returns results.</p>
+                    <p>This project demonstrates the <strong>Model Context Protocol (MCP)</strong>: a client discovers and invokes server tools dynamically.</p>
+                    <p>The web UI sends natural language to an MCP client, which selects tools like:</p>
+                    <ul>
+                        <li>A swath of tools that reach out to external APIs to get images of animals:</li>
+                          <ul>
+                            <li><code>duck</code> → <a href="https://random-d.uk/" target="_blank">random-d.uk API</a></li>
+                            <li><code>dog</code> → <a href="https://random.dog/" target="_blank">random.dog API</a></li>
+                            <li><code>cat</code> → <a href="https://thecatapi.com/" target="_blank">The Cat API</a></li>
+                          </ul>
+                        <li><code>ping</code></li>
+                        <li><code>health_check</code></li></li>
+                    </ul> on the server, then returns results.</p>
                     <p>Built for <a href="https://themodernsoftware.dev/" target="_blank">The Modern Software Developer</a> — Week 3 assignment: <a href="https://github.com/mihail911/modern-software-dev-assignments/blob/master/week3/assignment.md" target="_blank">MCP Server + Client</a>.</p>
                 </div>
                 <div class="section back">
-                    <a href="index.html">🏠 Return to Petting Zootopia</a>
+                    <a href="/">🏠 Return to Petting Zootopia</a>
                 </div>
             </div>
         </div>

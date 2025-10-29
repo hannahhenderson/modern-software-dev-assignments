@@ -62,8 +62,6 @@ If no tool is needed or the query doesn't match any available tools, respond wit
 
 Examples:
 - "Show me a duck" → {{"tool": "duck", "parameters": {{}}}}
-- "Hello Alice" → {{"tool": "greet", "parameters": {{"name": "Alice"}}}}
-- "Hi there" → {{"tool": "greet", "parameters": {{"name": "there"}}}}
 - "I want a giraffe" → {{"tool": null, "parameters": {{}}}} (no giraffe tool available)
 - "What's the weather?" → {{"tool": null, "parameters": {{}}}} (no weather tool available)
 """
@@ -225,9 +223,7 @@ def create_mcp_client():
         print("Type your queries or 'quit' to exit.")
         print("Examples:")
         print("- 'Show me a duck'")
-        print("- 'Hello Alice'")
         print("- 'I want a GIF'")
-        print("- 'Greet me as Bob'")
         
         while True:
             try:
