@@ -7,7 +7,7 @@ import os
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rate_limiter import wait_for_rate_limit, check_api_rate_limit
+from rate_limiting import check_api_rate_limit, RateLimitError
 from error_handling import handle_httpx_error, get_user_friendly_message, validate_input, PettingZooError
 from health_check import get_health_status
 from observability import trace_tool
@@ -27,13 +27,7 @@ async def duck() -> str:
     """Get a random duck GIF from the random-d.uk API."""
     try:
         # Check rate limit first
-        rate_info = await check_api_rate_limit('duck')
-        if rate_info.status.value == 'exceeded':
-            logger.warning("Duck API rate limit exceeded")
-            return "Error: Duck API rate limit exceeded. Please try again later."
-        
-        # Wait for rate limit if needed
-        await wait_for_rate_limit('duck')
+        await check_api_rate_limit('duck')
         
         duck_url = "https://random-d.uk/api/v2/random"
         logger.info(f"Fetching duck from {duck_url}")
@@ -46,6 +40,9 @@ async def duck() -> str:
             logger.info(f"Successfully fetched duck: {url}")
             return url
     
+    except RateLimitError as e:
+        logger.warning(f"Rate limit exceeded for duck: {e}")
+        return f"Rate limit exceeded: {e}"
     except httpx.HTTPError as e:
         error = handle_httpx_error(e, "duck")
         logger.error(f"Duck API error: {error.message}")
@@ -60,13 +57,7 @@ async def dog() -> str:
     """Get a random dog image from random.dog API."""
     try:
         # Check rate limit first
-        rate_info = await check_api_rate_limit('dog')
-        if rate_info.status.value == 'exceeded':
-            logger.warning("Dog API rate limit exceeded")
-            return "Error: Dog API rate limit exceeded. Please try again later."
-        
-        # Wait for rate limit if needed
-        await wait_for_rate_limit('dog')
+        await check_api_rate_limit('dog')
         
         dog_url = "https://random.dog/woof.json"
         logger.info(f"Fetching dog from {dog_url}")
@@ -110,6 +101,9 @@ async def dog() -> str:
             logger.warning("All dog APIs failed, using fallback image")
             return "https://images.dog.ceo/breeds/retriever-golden/n02099601_1004.jpg"
     
+    except RateLimitError as e:
+        logger.warning(f"Rate limit exceeded for dog: {e}")
+        return f"Rate limit exceeded: {e}"
     except httpx.HTTPError as e:
         error = handle_httpx_error(e, "dog")
         logger.error(f"Dog API error: {error.message}")
@@ -124,13 +118,7 @@ async def cat() -> str:
     """Get a random cat image from the cat.ceo API."""
     try:
         # Check rate limit first
-        rate_info = await check_api_rate_limit('cat')
-        if rate_info.status.value == 'exceeded':
-            logger.warning("Cat API rate limit exceeded")
-            return "Error: Cat API rate limit exceeded. Please try again later."
-        
-        # Wait for rate limit if needed
-        await wait_for_rate_limit('cat')
+        await check_api_rate_limit('cat')
         
         cat_url = "https://api.thecatapi.com/v1/images/search"
         logger.info(f"Fetching cat from {cat_url}")
@@ -148,6 +136,9 @@ async def cat() -> str:
                 logger.warning("No cat images found in API response")
                 return "No cat images available"
     
+    except RateLimitError as e:
+        logger.warning(f"Rate limit exceeded for cat: {e}")
+        return f"Rate limit exceeded: {e}"
     except httpx.HTTPError as e:
         error = handle_httpx_error(e, "cat")
         logger.error(f"Cat API error: {error.message}")

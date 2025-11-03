@@ -13,9 +13,12 @@ from pathlib import Path
 # Add the parent directory to the path so we can import the MCP client
 sys.path.append(str(Path(__file__).parent.parent))
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import uvicorn
 
 # Import our MCP client
@@ -27,7 +30,14 @@ from ai_mcp_client import create_mcp_client
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="Petting Zootopia MCP Web Interface", version="1.0.0")
+
+# Add rate limiter to the app
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Mount static files
 app.mount("/assets", StaticFiles(directory="assets"), name="assets")
@@ -80,7 +90,8 @@ async def serve_index():
     return FileResponse("index.html")
 
 @app.post("/api/animal")
-async def get_animal(request: dict):
+@limiter.limit("10 per minute")  # 10 requests per minute per IP
+async def get_animal(request: Request):
     """
     Get an animal image using the MCP client.
     This demonstrates proper MCP client/server interaction.
@@ -97,11 +108,14 @@ async def get_animal(request: dict):
         raise HTTPException(status_code=500, detail="MCP client not initialized")
     
     try:
+        # Get request data
+        request_data = await request.json()
+        
         # Handle new query format or fallback to old format
-        query = request.get("query")
+        query = request_data.get("query")
         if not query:
             # Backward compatibility
-            animal_type = request.get("animal", "").lower()
+            animal_type = request_data.get("animal", "").lower()
             query = f"I want a {animal_type}!"
         
         logger.info(f"Processing query: {query}")
@@ -166,7 +180,8 @@ async def get_animal(request: dict):
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/api/health")
-async def health_check():
+@limiter.limit("10 per minute")  # 10 health checks per minute per IP
+async def health_check(request: Request):
     """Health check endpoint."""
     return {"status": "healthy", "web_server": "running", "mcp_connected": mcp_client is not None}
 
