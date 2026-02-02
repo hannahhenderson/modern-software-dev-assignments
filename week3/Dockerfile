@@ -6,16 +6,13 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files first for better caching
-COPY pyproject.toml .
-COPY README.md .
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -e .
-
-# Copy application code
+# Copy all source files
+COPY pyproject.toml README.md ./
 COPY src/ src/
 COPY web/ web/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir .
 
 # Expose port
 EXPOSE 8000
