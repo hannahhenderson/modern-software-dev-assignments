@@ -1,646 +1,272 @@
-# Petting Zootopia MCP Server
+# Petting Zootopia
 
-A Model Context Protocol (MCP) server that provides animal image tools with AI-powered client support.
+A functional MCP (Model Context Protocol) server for fetching random animal images. Built with Python using functional programming principles.
 
-## 🐾 MCP Tools Reference
+## Quickstart
 
-### Available Tools
+### Option 1: Docker (Recommended)
 
-| Tool | Description | Parameters | Returns | Example |
-|------|-------------|------------|---------|---------|
-| `duck` | Get a random duck image | None | Duck image URL | `duck()` → `"https://random-d.uk/api/v2/random.gif"` |
-| `dog` | Get a random dog image | None | Dog image URL | `dog()` → `"https://random.dog/abc123.jpg"` |
-| `cat` | Get a random cat image | None | Cat image URL | `cat()` → `"https://cdn2.thecatapi.com/images/..."` |
-| `ping` | Check if MCP server is running | None | Server status | `ping()` → `"pong"` |
-| `health_check` | Check external API health status | None | Health report | `health_check()` → `"Overall Status: HEALTHY..."` |
-
-### Tool Details
-
-#### `duck() -> str`
-- **Purpose**: Fetch a random duck image from random-d.uk API
-- **Parameters**: None
-- **Returns**: URL to a random duck image (GIF, JPG, or PNG)
-- **API**: https://random-d.uk/api/v2/random
-- **Rate Limits**: None
-- **Error Handling**: Returns fallback message if API fails
-- **Example Usage**: `duck()` → `"https://random-d.uk/api/v2/random.gif"`
-
-#### `dog() -> str`
-- **Purpose**: Fetch a random dog image with robust fallback system
-- **Parameters**: None
-- **Returns**: URL to a random dog image
-- **Primary API**: https://random.dog/woof.json
-- **Fallback APIs**: 
-  - https://dog.ceo/api/breeds/image/random (if random.dog fails)
-  - Known good image URL (if all APIs fail)
-- **Rate Limits**: Implements exponential backoff
-- **Error Handling**: Multi-tier fallback system with URL validation
-- **Example Usage**: `dog()` → `"https://random.dog/abc123.jpg"`
-
-#### `cat() -> str`
-- **Purpose**: Fetch a random cat image from The Cat API
-- **Parameters**: None
-- **Returns**: URL to a random cat image
-- **API**: https://api.thecatapi.com/v1/images/search
-- **Rate Limits**: Implements exponential backoff
-- **Error Handling**: Returns fallback message if API fails
-- **Example Usage**: `cat()` → `"https://cdn2.thecatapi.com/images/cov.jpg"`
-
-#### `ping() -> str`
-- **Purpose**: Simple connectivity test for the MCP server
-- **Parameters**: None
-- **Returns**: "pong" if server is running
-- **Use Case**: Quick server availability check
-- **Features**: Lightweight server health check, no external API calls
-- **Example Usage**: `ping()` → `"pong"`
-
-#### `health_check() -> str`
-- **Purpose**: Monitor health status of all external APIs
-- **Parameters**: None
-- **Returns**: Detailed health report with status, response times, and error details
-- **APIs Monitored**: duck, dog, cat APIs
-- **Status Levels**: HEALTHY, DEGRADED, UNHEALTHY
-- **Use Case**: Debugging API issues and monitoring external dependencies
-- **Features**: Tests all APIs, reports status, provides diagnostics
-- **Example Usage**: `health_check()` → `"Overall Status: HEALTHY\nHealthy APIs: 3/3\nDUCK API: HEALTHY\n..."`
-
-### Error Handling
-
-All tools include robust error handling for:
-- **Network timeouts** (10 second timeout)
-- **HTTP errors** (4xx, 5xx status codes)
-- **API rate limits** (exponential backoff with user-friendly messages)
-- **Empty responses** (graceful fallbacks)
-- **Input validation** (parameter validation with clear error messages)
-- **Health monitoring** (comprehensive API health checks)
-
-### Expected Behaviors
-
-- **Success**: Returns image URL as string
-- **Timeout**: Returns user-friendly message: `"🐾 The [animal]s are being shy and taking their time. Please try again!"`
-- **HTTP Error**: Returns contextual message: `"🐾 The [animal] API is having a nap. Please try again later!"`
-- **Rate Limit**: Returns backoff message: `"🐾 The [animal] API is busy right now. The animals are taking a break! Please try again in a moment."`
-- **Validation Error**: Returns clear validation message: `"🐾 That doesn't look like a valid [animal] request. Please try again!"`
-- **Empty Response**: Returns `"No [animal] images available"`
-
-## 🌐 Web Interface
-
-A beautiful web interface is available for easy interaction:
-
-- **🎨 Modern UI** - Responsive design with smooth animations
-- **🖼️ Visual Interface** - Click buttons to get animal images
-- **🔗 REST API** - FastAPI backend with MCP integration
-- **📱 Mobile Friendly** - Works on all devices
-
-## 🚀 Quick Start
-
-### 1. Automated Setup (Recommended)
 ```bash
-# Run the setup script (only installs missing dependencies)
-./setup.sh
+docker-compose up
 ```
 
-### 1b. Manual Setup
+Open http://localhost:8000 in your browser.
+
+### Option 2: Local Installation
+
 ```bash
-# Install Python dependencies (only if missing)
-pip install fastmcp httpx anthropic python-dotenv requests
+# Install dependencies
+make dev
 
-# Optional: Install OpenTelemetry for Honeycomb.io tracing
-pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp opentelemetry-instrumentation-httpx opentelemetry-instrumentation-fastapi
+# Copy and configure environment
+cp .env.example .env
 
-# Install Ollama (for local AI) - only if not already installed
-curl -fsSL https://ollama.ai/install.sh | sh
+# Start the web server
+make run-web
 ```
 
-### 2. Start Ollama (for local AI)
-```bash
-# Start Ollama service
-ollama serve
+Open http://localhost:8000 in your browser.
 
-# In another terminal, pull a model
-ollama pull llama3.2:3b
+## Features
+
+- **MCP Server**: Exposes tools for fetching duck, dog, and cat images
+- **Web Interface**: Beautiful UI for browsing animal images
+- **AI Client**: Natural language queries with Ollama or Claude backends
+- **Functional Design**: Result types, immutable data, explicit dependencies
+
+## Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Web Client    │────▶│   FastAPI Web   │────▶│  External APIs  │
+│   (Browser)     │     │     Server      │     │ (duck/dog/cat)  │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   AI Client     │────▶│   MCP Server    │────▶│  External APIs  │
+│ (Ollama/Claude) │     │  (FastMCP)      │     │ (duck/dog/cat)  │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
-### 3. Run the Server
+## Usage
+
+### Web Interface
+
 ```bash
-# Start the MCP server
-python server/petting_zootopia.py
+make run-web
+# Visit http://localhost:8000
 ```
 
-## 🧪 Testing the MCP Server
+### MCP Server (for AI clients)
 
-### Method 1: Claude Desktop (Recommended)
+```bash
+make run-server
+```
 
-#### Setup Claude Desktop
-1. **Download Claude Desktop** from [claude.ai](https://claude.ai)
-2. **Open Claude Desktop settings** (usually in the app menu)
-3. **Add MCP server configuration**:
+### Interactive CLI Client
 
+```bash
+# Requires Ollama running locally (or configure Claude)
+make run-client
+```
+
+Example queries:
+- "Show me a duck"
+- "I want to see a cute cat"
+- "Give me a random dog"
+
+## Configuration
+
+Copy `.env.example` to `.env` and customize:
+
+```bash
+cp .env.example .env
+```
+
+### AI Backends
+
+| Backend | Description | Setup |
+|---------|-------------|-------|
+| `ollama` | Free, local LLM | [Install Ollama](https://ollama.ai), run `ollama pull llama3.2:3b` |
+| `claude_haiku` | Fast, cheap Claude | Set `ANTHROPIC_API_KEY` |
+| `claude_sonnet` | High-quality Claude | Set `ANTHROPIC_API_KEY` |
+
+### Key Settings
+
+```env
+AI_BACKEND=ollama           # ollama, claude_haiku, or claude_sonnet
+PORT=8000                   # Web server port
+RATE_LIMIT=10/minute        # API rate limiting
+LOG_LEVEL=info              # debug, info, warning, error
+```
+
+## API Reference
+
+### REST Endpoints
+
+#### `POST /api/animal`
+
+Fetch a random animal image.
+
+```bash
+curl -X POST http://localhost:8000/api/animal \
+  -H "Content-Type: application/json" \
+  -d '{"animal": "duck"}'
+```
+
+Response:
 ```json
 {
-  "mcpServers": {
-    "petting-zootopia": {
-      "command": "python",
-      "args": ["/Users/hannahhenderson/Desktop/stanford2025/modern-software-dev-assignments/week3/server/petting_zootopia.py"]
-    }
-  }
+  "success": true,
+  "image_url": "https://random-d.uk/api/123.jpg",
+  "animal": "duck",
+  "message": "Here's a duck!"
 }
 ```
 
-#### Test with Claude Desktop
-1. **Restart Claude Desktop** after adding the configuration
-2. **Start a new conversation**
-3. **Try these prompts**:
-   - "Show me a duck!"
-   - "Get me a random dog image"
-   - "I want to see a cat"
-   - "Hello, my name is Alice" (tests the greet function)
+#### `GET /api/animals`
 
-### Method 2: MCP Inspector Tool
-
-#### Install MCP Inspector
-```bash
-# Install globally
-npm install -g @modelcontextprotocol/inspector
-
-# Or use npx
-npx @modelcontextprotocol/inspector
-```
-
-#### Test Your Server
-```bash
-# Navigate to your project directory
-cd /Users/hannahhenderson/Desktop/stanford2025/modern-software-dev-assignments/week3
-
-# Test the MCP server
-mcp-inspector python server/petting_zootopia.py
-```
-
-This will open a web interface where you can:
-- **See available tools** (duck, dog, cat, greet)
-- **Test tool calls** with parameters
-- **View responses** and debug any issues
-
-### Method 3: Web Interface (Bonus)
-
-The web interface provides an easy way to test the MCP integration:
+List available animal types.
 
 ```bash
-# Start the web server (in a new terminal)
-cd web_client
-python app.py
-
-# Open browser to http://localhost:8000
-# Click animal buttons to test the MCP tools
+curl http://localhost:8000/api/animals
 ```
 
-### Method 4: Automated Testing Script
-
-#### Quick Test (Recommended)
-```bash
-# Run the automated test script
-python test_mcp_tools.py
-```
-
-This will test all tools and show you the results:
-- ✅ **Greet function** - Tests basic functionality
-- 🦆 **Duck function** - Tests random-d.uk API
-- 🐶 **Dog function** - Tests dog.ceo API  
-- 🐱 **Cat function** - Tests thecatapi.com API
-
-#### Manual Testing
-```python
-# Create a test script
-import asyncio
-import sys
-sys.path.append('server')
-
-from petting_zootopia import duck, dog, cat, greet
-
-async def test_tools():
-    print("Testing greet function:")
-    print(greet("Alice"))
-    
-    print("\nTesting duck function:")
-    duck_url = await duck()
-    print(f"Duck URL: {duck_url}")
-    
-    print("\nTesting dog function:")
-    dog_url = await dog()
-    print(f"Dog URL: {dog_url}")
-    
-    print("\nTesting cat function:")
-    cat_url = await cat()
-    print(f"Cat URL: {cat_url}")
-
-# Run the test
-asyncio.run(test_tools())
-```
-
-### Method 5: MCP Client Testing
-
-#### Using the AI MCP Client
-```bash
-# Start the MCP client (in a new terminal)
-python mcp_client/ai_mcp_client.py server/petting_zootopia.py
-
-# Try these queries:
-# - "Show me a duck"
-# - "I want a dog"
-# - "Get me a cat"
-# - "Hello, I'm Bob"
-```
-
-## 🔧 Troubleshooting
-
-### Server Not Starting
-```bash
-# Check if dependencies are installed
-pip list | grep fastmcp
-
-# Install missing dependencies
-pip install fastmcp httpx
-
-# Check Python version
-python --version
-```
-
-### Claude Desktop Not Finding Server
-1. **Check the file path** in the configuration
-2. **Ensure the server is running** (`ps aux | grep petting`)
-3. **Restart Claude Desktop** after configuration changes
-4. **Check Claude Desktop logs** for error messages
-
-### MCP Inspector Issues
-```bash
-# Check if Node.js is installed
-node --version
-
-# Install MCP inspector locally
-npm install @modelcontextprotocol/inspector
-npx @modelcontextprotocol/inspector python server/petting_zootopia.py
-```
-
-### API Rate Limits
-- **Duck API**: No rate limits
-- **Dog API**: 1000 requests/hour
-- **Cat API**: 10 requests/minute
-
-If you hit rate limits, wait a few minutes and try again.
-
-## 📋 Assignment Compliance
-
-This MCP server meets all Week 3 assignment requirements:
-
-### ✅ Core Requirements
-- **✅ External API Integration**: Uses 3 different APIs (random-d.uk, dog.ceo, thecatapi.com)
-- **✅ 2+ MCP Tools**: Implements 4 tools (greet, duck, dog, cat)
-- **✅ Error Handling**: Comprehensive timeout, HTTP error, and rate limit handling
-- **✅ Local STDIO Server**: Runs locally and discoverable by Claude Desktop
-- **✅ Clear Documentation**: Complete setup and usage instructions
-
-### ✅ Reliability Features
-- **✅ Input Validation**: Proper parameter handling
-- **✅ Error Handling**: Graceful failures with user-friendly messages
-- **✅ Logging**: Comprehensive logging for debugging
-- **✅ Rate Limit Awareness**: Respects API rate limits with appropriate delays
-
-### ✅ Developer Experience
-- **✅ Easy Setup**: Automated setup script with dependency checking
-- **✅ Clear Documentation**: Comprehensive README with examples
-- **✅ Multiple Testing Methods**: 5 different ways to test the server
-- **✅ Sensible Structure**: Clean folder organization
-
-### ✅ Code Quality
-- **✅ Readable Code**: Clear function names and structure
-- **✅ Type Hints**: Proper type annotations where applicable
-- **✅ Minimal Complexity**: Simple, focused functions
-- **✅ Error Handling**: Robust exception handling throughout
-
-### 🎯 Assignment Score: 90/90 points
-- **Functionality (35/35)**: 4 tools, correct API integration, meaningful outputs
-- **Reliability (20/20)**: Input validation, error handling, logging, rate-limit awareness
-- **Developer Experience (20/20)**: Clear setup/docs, easy to run, sensible structure
-- **Code Quality (15/15)**: Readable code, descriptive names, minimal complexity
-
-### 🚀 Bonus Features
-- **🌐 Web Interface**: Beautiful, responsive web UI (beyond requirements)
-- **🤖 AI Integration**: MCP client with multiple AI backends
-- **📱 Mobile Support**: Responsive design for all devices
-- **🎨 Playful Design**: Animal-themed animations and interactions
-
-### 4. Choose Your Interface
-
-#### 🌐 Web Interface (Recommended)
-```bash
-# Start everything with web interface
-./setup.sh
-# Choose option 1, then open http://localhost:8000
-```
-
-#### 🤖 Command Line Interface
-```bash
-# Start interactive MCP client
-./setup.sh
-# Choose option 2, then type natural language queries
-```
-
-#### 🔧 Development Mode
-```bash
-# Start just the MCP server
-./setup.sh
-# Choose option 3 for development/testing
-```
-
-## 🤖 AI Backend Options
-
-### Ollama (Recommended for Learning)
-- ✅ **Free** - no API costs
-- ✅ **Local** - runs on your machine
-- ✅ **Offline** - no internet required
-- ✅ **Fast** - no network latency
-
-### Claude Cheaper (Haiku)
-- 💰 **Cheap** - $0.25/$1.25 per 1M tokens
-- 🌐 **Online** - requires internet
-- ⚡ **Fast** - good for development
-
-### Claude Expensive (Sonnet)
-- 💰 **Expensive** - $3.00/$15.00 per 1M tokens
-- 🌐 **Online** - requires internet
-- 🎯 **Best Quality** - for production use
-
-## 🔧 Configuration
-
-Create a `.env` file in your project root:
-
-```bash
-# AI Backend Configuration
-AI_BACKEND=ollama_dev  # or claude_cheaper, claude_expensive
-
-# Ollama Configuration (when AI_BACKEND=ollama_dev)
-OLLAMA_MODEL=llama3.2:3b
-
-# Claude Configuration (when AI_BACKEND starts with claude)
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-```
-
-## 📖 Usage Examples
-
-### 🌐 Web Interface
-```bash
-# Start web interface
-./setup.sh
-# Choose option 1, then open http://localhost:8000
-# Click animal buttons to get images via MCP client/server!
-```
-
-### 🤖 Command Line Interface
-```bash
-# Start interactive MCP client
-./setup.sh
-# Choose option 2, then type queries:
-
-Query: Show me a duck
-Query: Hello Alice  
-Query: I want a cat picture
-Query: Get me a dog
-```
-
-### 🔧 Direct MCP Server Usage
-```python
-# The MCP server provides these tools:
-await greet("Alice")           # Returns: "Hello, Alice!"
-await duck()                   # Returns: "https://random-d.uk/api/gifs/12.gif"
-await dog()                    # Returns: "https://images.dog.ceo/breeds/..."
-await cat()                    # Returns: "https://cdn2.thecatapi.com/images/..."
-```
-
-## 🏗️ Architecture
-
-### Web Interface (`web_client/`)
-- **Frontend**: HTML/CSS/JavaScript with responsive design
-- **Backend**: FastAPI server with MCP integration
-- **Features**: Visual buttons, loading states, error handling
-- **Port**: 8000 (http://localhost:8000)
-
-### Server (`server/petting_zootopia.py`)
-- **Type**: FastMCP server
-- **Transport**: STDIO (local communication)
-- **Tools**: 4 animal image tools
-- **APIs**: random-d.uk, dog.ceo, thecatapi.com
-
-### Client (`mcp_client/ai_mcp_client.py`)
-- **Type**: Pure functional Python
-- **Features**: Multi-backend AI support
-- **Backends**: Ollama (local), Claude (cloud)
-- **AI Models**: Llama 3.2, Claude Haiku, Claude Sonnet
-
-## 🛠️ Development
-
-### Adding New Tools
-1. Add tool function to `server/petting_zootopia.py`
-2. Use `@mcp.tool` decorator
-3. Add proper error handling
-4. Test with web interface and client
-
-### Adding New Web Features
-1. Add button to `web_client/index.html`
-2. Update JavaScript in `web_client/index.html`
-3. Add API endpoint to `web_client/app.py`
-4. Test the complete flow
-
-### Adding New AI Backends
-See the "Adding New AI Backends" section below for detailed instructions.
-
-## ⚙️ Advanced Configuration
-
-### Environment Variables
-
-Create a `.env` file in your project root:
-
-```bash
-# AI Backend Configuration
-# Choose one of: ollama_dev, claude_cheaper, claude_expensive
-AI_BACKEND=ollama_dev
-
-# Ollama Configuration (when AI_BACKEND=ollama_dev)
-OLLAMA_MODEL=llama3.2:3b
-
-# Claude Configuration (when AI_BACKEND starts with claude)
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-```
-
-### Detailed Backend Setup
-
-#### Ollama (Recommended for Learning)
-```bash
-AI_BACKEND=ollama_dev
-OLLAMA_MODEL=llama3.2:3b
-```
-- ✅ **Free** - no API costs
-- ✅ **Local** - runs on your machine
-- ✅ **Offline** - no internet required
-- ✅ **Fast** - no network latency
-
-#### Claude Cheaper (Haiku)
-```bash
-AI_BACKEND=claude_cheaper
-ANTHROPIC_API_KEY=your_key_here
-```
-- 💰 **Cheap** - $0.25/$1.25 per 1M tokens
-- 🌐 **Online** - requires internet
-- ⚡ **Fast** - good for development
-- 🎯 **Model**: Claude Haiku
-
-#### Claude Expensive (Sonnet)
-```bash
-AI_BACKEND=claude_expensive
-ANTHROPIC_API_KEY=your_key_here
-```
-- 💰 **Expensive** - $3.00/$15.00 per 1M tokens
-- 🌐 **Online** - requires internet
-- 🎯 **Best Quality** - for production use
-- 🎯 **Model**: Claude Sonnet 4.5
-
-### Virtual Environment Setup
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-## 🔧 Adding New AI Backends
-
-The client uses pure functional programming with function factories. Here's how to add new backends:
-
-### 1. Create the Processor Function
-
-```python
-def create_openai_processor(model: str, max_tokens: int):
-    """Create an OpenAI processor using pure functional composition"""
-    openai = OpenAI()
-    
-    async def process_query(query: str, available_tools: list, session: ClientSession) -> str:
-        """Process query using OpenAI"""
-        messages = [{"role": "user", "content": query}]
-
-        # OpenAI API call
-        response = openai.chat.completions.create(
-            model=model,
-            max_tokens=max_tokens,
-            messages=messages,
-            tools=available_tools
-        )
-
-        # Process response and handle tool calls
-        final_text = []
-        for choice in response.choices:
-            if choice.message.content:
-                final_text.append(choice.message.content)
-            
-            if choice.message.tool_calls:
-                for tool_call in choice.message.tool_calls:
-                    tool_name = tool_call.function.name
-                    tool_args = json.loads(tool_call.function.arguments)
-                    
-                    # Execute tool call
-                    result = await session.call_tool(tool_name, tool_args)
-                    final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
-                    final_text.append(f"Result: {result.content}")
-
-        return "\n".join(final_text)
-    
-    return process_query  # Returns a function, not a class
-```
-
-### 2. Add to Factory Functions
-
-```python
-processor_factories = {
-    # ... existing backends ...
-    'openai_cheaper': lambda: create_openai_processor(
-        model=os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo'),
-        max_tokens=int(os.getenv('OPENAI_MAX_TOKENS', '500'))
-    ),
-    'openai_expensive': lambda: create_openai_processor(
-        model=os.getenv('OPENAI_MODEL', 'gpt-4'),
-        max_tokens=int(os.getenv('OPENAI_MAX_TOKENS', '1000'))
-    )
+Response:
+```json
+{
+  "animals": ["duck", "dog", "cat"]
 }
 ```
 
-### 3. Use the New Backend
+#### `GET /api/health`
+
+Health check endpoint.
+
+### MCP Tools
+
+When running as an MCP server, these tools are available:
+
+| Tool | Description |
+|------|-------------|
+| `duck()` | Get a random duck image |
+| `dog()` | Get a random dog image |
+| `cat()` | Get a random cat image |
+| `ping()` | Health check |
+| `health_check()` | Check all external APIs |
+
+## Development
+
+### Setup
 
 ```bash
-AI_BACKEND=openai_cheaper python mcp_client/ai_mcp_client.py server/petting_zootopia.py
+make dev          # Install with dev dependencies
 ```
 
-### Benefits of This Functional Design
+### Commands
 
-- ✅ **Zero classes** - pure functional programming
-- ✅ **Function factories** - create configured functions
-- ✅ **Closures** - capture state without classes
-- ✅ **Higher-order functions** - functions that return functions
-- ✅ **Function composition** - combine functions elegantly
-- ✅ **Pure functions** - no side effects
-- ✅ **Easy to extend** - just add to factory functions
-
-## 🎯 Assignment Requirements
-
-This project fulfills the Week 3 MCP assignment requirements:
-
-- ✅ **External API integration** - 3 animal image APIs
-- ✅ **2+ MCP tools** - 4 tools total
-- ✅ **Error handling** - Graceful HTTP failures and timeouts
-- ✅ **Clear documentation** - This README and setup instructions
-- ✅ **Local deployment** - STDIO server for Claude Desktop
-- ✅ **Example usage** - AI client with natural language interaction
-
-## 🚨 Troubleshooting
-
-### Ollama Issues
 ```bash
-# Check if Ollama is running
-curl http://localhost:11434/api/tags
-
-# Restart Ollama
-ollama serve
+make test         # Run tests
+make lint         # Run linter
+make format       # Format code
+make typecheck    # Run type checker
+make clean        # Remove build artifacts
 ```
 
-### Claude Issues
-```bash
-# Check API key
-echo $ANTHROPIC_API_KEY
+### Project Structure
 
-# Test with environment variable
-AI_BACKEND=claude_cheaper python mcp_client/ai_mcp_client.py server/petting_zootopia.py
+```
+petting-zootopia/
+├── src/petting_zootopia/
+│   ├── __init__.py       # Package exports
+│   ├── types.py          # Result types, error types, data models
+│   ├── config.py         # Pydantic settings
+│   ├── http.py           # Pure HTTP fetch functions
+│   ├── server.py         # MCP server
+│   ├── client.py         # AI-powered MCP client
+│   └── web.py            # FastAPI web server
+├── web/
+│   ├── index.html        # Main web page
+│   ├── about.html        # About page
+│   └── assets/           # Static assets
+├── tests/                # Test suite
+├── pyproject.toml        # Dependencies and config
+├── Makefile              # Development commands
+├── Dockerfile            # Container image
+└── docker-compose.yml    # Multi-service setup
 ```
 
-### Server Issues
-```bash
-# Check server is running
-python server/petting_zootopia.py
+## Functional Programming Patterns
 
-# Should show: "MCP server started"
+This codebase demonstrates several functional programming patterns in Python:
+
+### Result Types
+
+Instead of exceptions, functions return `Result[T, E]` (either `Ok(value)` or `Err(error)`):
+
+```python
+async def fetch_duck(client, config) -> Result[AnimalImage, APIError]:
+    # Returns Ok(image) on success, Err(error) on failure
+    ...
+
+# Usage with pattern matching
+match await fetch_duck(client, config):
+    case Ok(image):
+        return image.url
+    case Err(RateLimited(retry_after=seconds)):
+        raise HTTPException(429, headers={"Retry-After": str(seconds)})
+    case Err(error):
+        return fallback_url
 ```
 
-### Web Interface Issues
-```bash
-# Check web server dependencies
-cd web
-pip install -r requirements.txt
+### Immutable Data
 
-# Start web server
-./start.sh
+All data structures are frozen dataclasses:
 
-# Check if running on http://localhost:8000
-curl http://localhost:8000/api/health
+```python
+@dataclass(frozen=True, slots=True)
+class AnimalImage:
+    url: str
+    animal: AnimalType
 ```
 
-## 📄 License
+### Explicit Dependencies
 
-This project is part of the [Stanford Modern Software Development](https://themodernsoftware.dev/) course.
+No global state. All dependencies are passed explicitly:
+
+```python
+def create_app(config: Config) -> FastAPI:
+    # Config injected, not imported from globals
+    ...
+
+async def fetch_duck(client: httpx.AsyncClient, config: Config) -> Result[...]:
+    # HTTP client and config are explicit parameters
+    ...
+```
+
+### Function Factories
+
+Higher-order functions create specialized functions:
+
+```python
+def create_ollama_processor(url: str, model: str) -> QueryProcessor:
+    # Returns a function configured with url and model
+    async def process_query(query, tools, session) -> str:
+        ...
+    return process_query
+```
+
+## External APIs
+
+This project uses these free, public APIs:
+
+| API | URL | Rate Limit |
+|-----|-----|------------|
+| Random Duck | random-d.uk | ~100/hour |
+| Random Dog | random.dog | ~1000/hour |
+| Dog CEO | dog.ceo | Generous |
+| The Cat API | thecatapi.com | 10/minute |
+
+## License
+
+MIT
